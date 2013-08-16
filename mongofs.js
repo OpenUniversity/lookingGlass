@@ -20,17 +20,23 @@ MFS.prototype.get = function(path, callback) {
 		try {
 			if(err) return callback(err);
 			if(docs.length < 1) {
-				callback(new Error('Path not found: ' + parsedPath.dirPath));
-				return;
+				err = new Error('Path not found: ' + parsedPath.dirPath);
+				err.fileNotFound = 1;
+				return callback(err);
 			}
 			var vers = docs[0][parsedPath.fileName];
 			if(!vers) {
-				callback(new Error('File not found: ' + path));
-				return;
+				err = new Error('File not found: ' + path);
+				err.fileNotFound = 1;
+				return callback(err);
 			}
 			if(vers.length < 1) {
-				callback(new Error('No versions found for: ' + path));
-				return;
+				return callback(new Error('No versions found for: ' + path));
+			}
+			if(vers[0]['/dead']) {
+				err = new Error('File not found: ' + path);
+				err.fileNotFound = 1;
+				return callback(err);
 			}
 			callback(undefined, vers[0]);
 		} catch(e) {
@@ -149,5 +155,38 @@ MFS.prototype.getDir = function(path, expandFiles, callback) {
 		}
 	});
 };
+MFS.prototype.remove = function(path, timestamp, callback) {
+	timestamp = timestamp || (new Date()).getTime();
+	this.put(path, {'/ts': timestamp, '/dead': 1}, callback);
+};
+
+MFS.prototype.createMapping = function(path, mapping, callback) {
+	var update = {};
+	if(!('/ts' in mapping)) {
+		mapping['/ts'] = (new Date()).getTime();
+	}
+	if(!('/uid' in mapping)) {
+		mapping['/uid'] = Math.floor(Math.random() * 1000000000);
+	}
+	update['/map.' + mapping['/ts'] + '-' + mapping['/uid']] = mapping;
+	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, function(err, doc) {
+		if(err) { return callback(err); }
+		try {
+			var actions = [];
+			for(var key in doc) {
+				if(key.charAt(0) == '/') continue;
+				if(Array.isArray(doc[key])) {
+					actions.push({type: 'map', mapping: mapping, path: path + key});
+				} else {
+					actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					
+				}
+			}
+			return callback(undefined, actions);
+		} catch(e) {
+			return callback(err);
+		}
+	});
+};
+
 exports.MFS = MFS;
 

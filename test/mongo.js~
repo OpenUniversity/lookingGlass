@@ -13,6 +13,22 @@ function protect(done, func) {
 	}
 }
 
+function trampoline(mfs, actions, callback) {
+	for(var i = 0; i < actions.length; i++) {
+		var action = actions[i];
+		if(action.type == 'tramp') {
+			actions.splice(i, 1);
+			mfs.trampoline(action, function(err, newActions) {
+				actions = actions.concat(newActions);
+				trampoline(mfs, actions, callback);
+			});
+			return;
+		}
+		// Found no trampoline actions
+		callback(undefined, actions);
+	}
+}
+
 describe('MongoFS', function() {
 	var mfs;
 	var coll;
@@ -21,9 +37,11 @@ describe('MongoFS', function() {
 			if(err) return done(err);
 			coll = db.collection('test');
 			mfs = new mongofs.MFS(coll);
-			done();
+			coll.remove({}, done);
 		});
 	});
+	
+
 	
 	after(function(done) {
 		coll.remove({}, done);
@@ -131,7 +149,7 @@ describe('MongoFS', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {a:1}, '/a/b/d': {a:2}, '/a/b/e': {a:3}, '/a/j/k': {a:4}}, done);
 		});
-		it.only('should retrieve the names of all files and sub-dirs in the directory', function(done) {
+		it('should retrieve the names of all files and sub-dirs in the directory', function(done) {
 			mfs.getDir('/a/', false, protect(done, function(err, content) {
 				assert.ifError(err);
 				assert(content.b, 'b');
@@ -148,6 +166,89 @@ describe('MongoFS', function() {
 				done();
 			}));
 		});
+	});
+
+	describe('.remove(path, timestamp, callback(err))', function(){
+		beforeEach(function(done) {
+			mfs.put('/file/to/delete', {foo: 'bar', '/ts': 1000}, done);
+		});
+		afterEach(function(done) {
+			coll.update({_id: '/file/to/'}, {$unset: {'delete':0}}, {}, done);
+		});
+		it('should remove a file of the given path', function(done) {
+			mfs.remove('/file/to/delete', 0, protect(done, function(err) {
+				assert.ifError(err);
+				mfs.get('/file/to/delete', protect(done, function(err, value) {
+					assert(err.fileNotFound, 'File should not exist');
+					done();
+				}));
+			}));
+		});
+		it('sould remove a file only if the removal timestamp is greater than the latest', function(done) {
+			mfs.remove('/file/to/delete', 900, protect(done, function(err) {
+				assert.ifError(err);
+				mfs.get('/file/to/delete', protect(done, function(err, value) {
+					assert.ifError(err);
+					assert.equal(value.foo, 'bar');
+					done();
+				}));
+			}));			
+		});
+	});
+
+	describe('.createMapping(path, mapping, callback(err, actions))', function() {
+		before(function(done) {
+			mfs.batchPut({'/a/b/c': {a:1},'/a/b/d': {a:2},'/a/b/e': {a:3},'/a/b/f/g': {a:4}}, done);
+		});
+		it('should add an entry in the /map sub-document of the directory', function(done) {
+			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
+				assert.ifError(err);
+				coll.find({_id: '/a/b/'}).toArray(protect(done, function(err, array) {
+					assert.ifError(err);
+					assert.equal(array.length, 1);
+					assert(array[0]['/map'], 'mapping sub-doc must exist');
+					for(var key in array[0]['/map']) {
+						// This should be the only one...
+						assert.equal(array[0]['/map'][key].map, 123);
+					}
+					done();
+				}));
+			}));
+		});
+		function actionsToMappings(actions) {
+			var mappings = {};
+			for(var i = 0; i < actions.length; i++) {
+				var action = actions[i];
+				if(action.type == 'map') {
+					mappings[action.path] = action.mapping;
+				}
+			}
+			return mappings;
+		}
+		it('should emit actions including the mapping for all files in the directory', function(done) {
+			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
+				assert.ifError(err);
+				var mappings = actionsToMappings(actions);
+				assert(mappings['/a/b/c'], 'Valid mapping for /a/b/c');
+				assert(mappings['/a/b/d'], 'Valid mapping for /a/b/d');
+				assert(mappings['/a/b/e'], 'Valid mapping for /a/b/e');
+				done();
+			}));
+		});
+		it.only('should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree', function(done) {
+			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
+				assert.ifError(err);
+console.log(actions);
+				trampoline(mfs, actions, protect(done, function(err, actions) {
+					var mappings = actionsToMappings(actions);
+					assert(mappings['/a/b/c'], 'Valid mapping for /a/b/c');
+					assert(mappings['/a/b/d'], 'Valid mapping for /a/b/d');
+					assert(mappings['/a/b/e'], 'Valid mapping for /a/b/e');
+					assert(mappings['/a/b/f/g'], 'Valid mapping for /a/b/f/g');
+					done();
+				}));
+			}));
+		})
 	});
 });
 
