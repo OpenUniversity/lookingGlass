@@ -19,14 +19,15 @@ function trampoline(mfs, actions, callback) {
 		if(action.type == 'tramp') {
 			actions.splice(i, 1);
 			mfs.trampoline(action, function(err, newActions) {
+				if(err) return callback(err);
 				actions = actions.concat(newActions);
 				trampoline(mfs, actions, callback);
 			});
 			return;
 		}
-		// Found no trampoline actions
-		callback(undefined, actions);
 	}
+	// Found no trampoline actions
+	callback(undefined, actions);
 }
 
 describe('MongoFS', function() {
@@ -235,7 +236,7 @@ describe('MongoFS', function() {
 				done();
 			}));
 		});
-		it.only('should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree', function(done) {
+		it('should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree', function(done) {
 			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
 				assert.ifError(err);
 				trampoline(mfs, actions, protect(done, function(err, actions) {

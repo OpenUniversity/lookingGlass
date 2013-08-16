@@ -174,7 +174,7 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 		try {
 			var actions = [];
 			for(var key in doc) {
-				if(key.charAt(0) == '/') continue;
+				if(key.charAt(0) == '/' || key.charAt(0) == '_') continue;
 				if(Array.isArray(doc[key])) {
 					actions.push({type: 'map', mapping: mapping, path: path + key});
 				} else {
@@ -187,6 +187,10 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 		}
 	});
 };
-
+MFS.prototype.trampoline = function(action, callback) { 
+	if(action.internalType == 'map') {
+		this.createMapping(action.path, action.mapping, callback);
+	}
+};
 exports.MFS = MFS;
 
