@@ -1,3 +1,5 @@
+var util = require('./util.js');
+
 function MFS(coll, options) {
 	this.coll = coll;
 	options = options || {};
@@ -16,34 +18,29 @@ MFS.prototype.get = function(path, callback) {
 	var parsedPath = parsePath(path);
 	var proj = {};
 	proj[parsedPath.fileName] = {$slice: -1};
-	this.coll.find({_id: parsedPath.dirPath}, proj).toArray(function(err, docs) {
-		try {
-			if(err) return callback(err);
-			if(docs.length < 1) {
-				err = new Error('Path not found: ' + parsedPath.dirPath);
-				err.fileNotFound = 1;
-				return callback(err);
-			}
-			var vers = docs[0][parsedPath.fileName];
-			if(!vers) {
-				err = new Error('File not found: ' + path);
-				err.fileNotFound = 1;
-				return callback(err);
-			}
-			if(vers.length < 1) {
-				return callback(new Error('No versions found for: ' + path));
-			}
-			if(vers[0]['/dead']) {
-				err = new Error('File not found: ' + path);
-				err.fileNotFound = 1;
-				return callback(err);
-			}
-			callback(undefined, vers[0]);
-		} catch(e) {
-			callback(e);
-			throw e;
+	this.coll.find({_id: parsedPath.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
+		if(err) return callback(err);
+		if(docs.length < 1) {
+			err = new Error('Path not found: ' + parsedPath.dirPath);
+			err.fileNotFound = 1;
+			return callback(err);
 		}
-	});
+		var vers = docs[0][parsedPath.fileName];
+		if(!vers) {
+			err = new Error('File not found: ' + path);
+			err.fileNotFound = 1;
+			return callback(err);
+		}
+		if(vers.length < 1) {
+			return callback(new Error('No versions found for: ' + path));
+		}
+		if(vers[0]['/dead']) {
+			err = new Error('File not found: ' + path);
+			err.fileNotFound = 1;
+			return callback(err);
+		}
+		callback(undefined, vers[0]);
+	}));
 }
 
 MFS.prototype.put = function(path, content, callback) {
@@ -54,14 +51,9 @@ MFS.prototype.put = function(path, content, callback) {
 	var update = {};
 	update[parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {'/ts':1}};
 	var self = this;
-	this.ensureParent(parsedPath.dirPath, function(err) {
-		if(err) { return callback(err); }
-		try {
-			self.coll.update({_id: parsedPath.dirPath}, {$push: update}, {safe: true, upsert: true}, callback);
-		} catch(e) {
-			callback(e);
-		}
-	});
+	this.ensureParent(parsedPath.dirPath, util.protect(callback, function(err) {
+		self.coll.findAndModify({_id: parsedPath.dirPath}, {_id:1}, {$push: update}, {safe: true, upsert: true}, util.protect(callback, function(err, ) {}));
+	}));
 };
 
 MFS.prototype.ensureParent = function(path, callback) {
@@ -72,42 +64,37 @@ MFS.prototype.ensureParent = function(path, callback) {
 	var proj = {};
 	proj[parsed.fileName] = 1;
 	var self = this;
-	this.coll.find({_id: parsed.dirPath}, proj).toArray(function(err, docs) {
-		try {
-			if(docs.length == 0) {
-				// Parent directory does not exist.
-				// Create and ensure parent.
-				var doc = {_id: parsed.dirPath};
-				doc[parsed.fileName] = 1;
-				self.coll.insert(doc, function(err) {
-					if(err) {
-						return callback(err);
-					}
-					self.ensureParent(parsed.dirPath, callback);
-				});
-			} else {
-				if(!docs[0][parsed.fileName]) {
-					// Parent dir exists, but does not point to the child
-					// Update it.
-					var update = {};
-					update[parsed.fileName] = 1;
-					self.coll.update({_id: parsed.dirPath}, {$set: update}, {safe: true}, callback);
-				} else {
-					// All is well.
-					// Nothing to do
-					callback();
+	this.coll.find({_id: parsed.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
+		if(docs.length == 0) {
+			// Parent directory does not exist.
+			// Create and ensure parent.
+			var doc = {_id: parsed.dirPath};
+			doc[parsed.fileName] = 1;
+			self.coll.insert(doc, function(err) {
+				if(err) {
+					return callback(err);
 				}
+				self.ensureParent(parsed.dirPath, callback);
+			});
+		} else {
+			if(!docs[0][parsed.fileName]) {
+				// Parent dir exists, but does not point to the child
+				// Update it.
+				var update = {};
+				update[parsed.fileName] = 1;
+				self.coll.update({_id: parsed.dirPath}, {$set: update}, {safe: true}, callback);
+			} else {
+				// All is well.
+				// Nothing to do
+				callback();
 			}
-		} catch (e) {
-			callback(e);
 		}
-	});
+	}));
 };
 
 function batchPutKeys(self, keys, keyVals, callback) {
 	if(keys.length == 0) {
-		callback();
-		return;
+		return callback();
 	}
 
 	try {
@@ -133,27 +120,23 @@ MFS.prototype.batchPut = function(keyVals, callback) {
 };
 
 MFS.prototype.getDir = function(path, expandFiles, callback) {
-	this.coll.find({_id: path}).toArray(function(err, docs) {
-		try {
-			if(err) {
-				return callback(err);
-			}
-			if(docs.length < 1) {
-				callback(new Error('Path not found: ' + path));
-				return;
-			}
-			var doc = docs[0];
-			if(expandFiles) {
-				for(var name in doc) {
-					var vers = doc[name];
-					doc[name] = vers[vers.length - 1];
-				}
-			}
-			callback(undefined, doc);
-		} catch(e) {
-			callback(e);
+	this.coll.find({_id: path}).toArray(util.protect(callback, function(err, docs) {
+		if(err) {
+			return callback(err);
 		}
-	});
+		if(docs.length < 1) {
+			callback(new Error('Path not found: ' + path));
+			return;
+		}
+		var doc = docs[0];
+		if(expandFiles) {
+			for(var name in doc) {
+				var vers = doc[name];
+				doc[name] = vers[vers.length - 1];
+			}
+		}
+		callback(undefined, doc);
+	}));
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
 	timestamp = timestamp || (new Date()).getTime();
@@ -169,26 +152,24 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 		mapping['/uid'] = Math.floor(Math.random() * 1000000000);
 	}
 	update['/map.' + mapping['/ts'] + '-' + mapping['/uid']] = mapping;
-	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, function(err, doc) {
+	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, util.protect(callback, function(err, doc) {
 		if(err) { return callback(err); }
-		try {
-			var actions = [];
-			for(var key in doc) {
-				if(key.charAt(0) == '/' || key.charAt(0) == '_') continue;
-				if(Array.isArray(doc[key])) {
-					actions.push({type: 'map', mapping: mapping, path: path + key});
-				} else {
-					actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					
-				}
+		var actions = [];
+		for(var key in doc) {
+			if(key.charAt(0) == '/' || key.charAt(0) == '_') continue;
+			if(Array.isArray(doc[key])) {
+				actions.push({type: 'map', mapping: mapping, path: path + key});
+			} else {
+				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					
 			}
-			return callback(undefined, actions);
-		} catch(e) {
-			return callback(err);
 		}
-	});
+		return callback(undefined, actions);
+	}));
 };
 MFS.prototype.trampoline = function(action, callback) { 
-	
+	if(action.internalType == 'map') {
+		this.createMapping(action.path, action.mapping, callback);
+	}
 };
 exports.MFS = MFS;
 
