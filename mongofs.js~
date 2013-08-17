@@ -17,7 +17,7 @@ function parsePath(path) {
 MFS.prototype.get = function(path, callback) {
 	var parsedPath = parsePath(path);
 	var proj = {};
-	proj[parsedPath.fileName] = {$slice: -1};
+	proj['f.' + parsedPath.fileName] = {$slice: -1};
 	this.coll.find({_id: parsedPath.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
 		if(err) return callback(err);
 		if(docs.length < 1) {
@@ -25,7 +25,7 @@ MFS.prototype.get = function(path, callback) {
 			err.fileNotFound = 1;
 			return callback(err);
 		}
-		var vers = docs[0][parsedPath.fileName];
+		var vers = docs[0].f[parsedPath.fileName];
 		if(!vers) {
 			err = new Error('File not found: ' + path);
 			err.fileNotFound = 1;
@@ -49,10 +49,21 @@ MFS.prototype.put = function(path, content, callback) {
 	}
 	var parsedPath = parsePath(path);
 	var update = {};
-	update[parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {'/ts':1}};
+	update['f.' + parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {'/ts':1}};
 	var self = this;
 	this.ensureParent(parsedPath.dirPath, util.protect(callback, function(err) {
-		self.coll.findAndModify({_id: parsedPath.dirPath}, {_id:1}, {$push: update}, {safe: true, upsert: true}, util.protect(callback, function(err, ) {}));
+		self.coll.findAndModify({_id: parsedPath.dirPath}, 
+			{_id:1}, 
+			{$push: update}, 
+			{safe: true, upsert: true}, 
+			util.protect(callback, function(err, doc) {
+				var mappings = doc.m;
+				var actions = [];
+				for(key in mappings) {
+					actions.push({type: 'map', mapping: mappings[key], path: path});
+				}
+				callback(undefined, actions);
+			}));
 	}));
 };
 
@@ -68,8 +79,8 @@ MFS.prototype.ensureParent = function(path, callback) {
 		if(docs.length == 0) {
 			// Parent directory does not exist.
 			// Create and ensure parent.
-			var doc = {_id: parsed.dirPath};
-			doc[parsed.fileName] = 1;
+			var doc = {_id: parsed.dirPath, f:{}};
+			doc.f[parsed.fileName] = 1;
 			self.coll.insert(doc, function(err) {
 				if(err) {
 					return callback(err);
@@ -77,11 +88,11 @@ MFS.prototype.ensureParent = function(path, callback) {
 				self.ensureParent(parsed.dirPath, callback);
 			});
 		} else {
-			if(!docs[0][parsed.fileName]) {
+			if(!docs[0].f || !docs[0].f[parsed.fileName]) {
 				// Parent dir exists, but does not point to the child
 				// Update it.
 				var update = {};
-				update[parsed.fileName] = 1;
+				update['f.' + parsed.fileName] = 1;
 				self.coll.update({_id: parsed.dirPath}, {$set: update}, {safe: true}, callback);
 			} else {
 				// All is well.
@@ -121,14 +132,11 @@ MFS.prototype.batchPut = function(keyVals, callback) {
 
 MFS.prototype.getDir = function(path, expandFiles, callback) {
 	this.coll.find({_id: path}).toArray(util.protect(callback, function(err, docs) {
-		if(err) {
-			return callback(err);
-		}
 		if(docs.length < 1) {
 			callback(new Error('Path not found: ' + path));
 			return;
 		}
-		var doc = docs[0];
+		var doc = docs[0].f;
 		if(expandFiles) {
 			for(var name in doc) {
 				var vers = doc[name];
@@ -155,9 +163,9 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, util.protect(callback, function(err, doc) {
 		if(err) { return callback(err); }
 		var actions = [];
-		for(var key in doc) {
-			if(key.charAt(0) == '/' || key.charAt(0) == '_') continue;
-			if(Array.isArray(doc[key])) {
+		var files = doc.f;
+		for(var key in files) {
+			if(Array.isArray(files[key])) {
 				actions.push({type: 'map', mapping: mapping, path: path + key});
 			} else {
 				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					

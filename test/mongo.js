@@ -35,16 +35,18 @@ describe('MongoFS', function() {
 	
 
 	
-	after(function(done) {
+	/*after(function(done) {
 		coll.remove({}, done);
-	});
+	});*/
 
 	describe('.get(path, callback(err, file))', function() {
 		before(function(done) {
 			coll.insert({
 				_id: '/hello/', 
-				a: [{foo: 'bar', '/ts':1}],
-				b: [{value:'first', '/ts':200}, {value:'last', '/ts':100}, ],
+				f : {
+					a: [{foo: 'bar', '/ts':1}],
+					b: [{value:'first', '/ts':200}, {value:'last', '/ts':100}, ]
+				}
 			}, done);
 		});
 
@@ -147,7 +149,7 @@ describe('MongoFS', function() {
 			mfs.put('/file/to/delete', {foo: 'bar', '/ts': 1000}, done);
 		});
 		afterEach(function(done) {
-			coll.update({_id: '/file/to/'}, {$unset: {'delete':0}}, {}, done);
+			coll.update({_id: '/file/to/'}, {$unset: {'f.delete':0}}, {}, done);
 		});
 		it('should remove a file of the given path', function(done) {
 			mfs.remove('/file/to/delete', 0, protect(done, function(err) {
@@ -171,14 +173,14 @@ describe('MongoFS', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {a:1},'/a/b/d': {a:2},'/a/b/e': {a:3},'/a/b/f/g': {a:4}}, done);
 		});
-		it('should add an entry in the /map sub-document of the directory', function(done) {
+		it('should add an entry in the ".m" sub-document of the directory', function(done) {
 			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
 				coll.find({_id: '/a/b/'}).toArray(protect(done, function(err, array) {
 					assert.equal(array.length, 1);
-					assert(array[0]['/map'], 'mapping sub-doc must exist');
-					for(var key in array[0]['/map']) {
+					assert(array[0].m, 'mapping sub-doc must exist');
+					for(var key in array[0].m) {
 						// This should be the only one...
-						assert.equal(array[0]['/map'][key].map, 123);
+						assert.equal(array[0].m[key].map, 123);
 					}
 					done();
 				}));
@@ -215,7 +217,17 @@ describe('MongoFS', function() {
 				}));
 			}));
 		});
-		it('should work whether or not the directory already exists');
+		it('should work whether or not the directory already exists', function(done) {
+			mfs.createMapping('/qwe/rty/', {foo: 'bar'}, protect(done, function(err, actions) {
+				mfs.put('/qwe/rty/uio', {baz: 'bat'}, protect(done, function(err, actions2) {
+					assert.equal(actions2.length, 1);
+					assert.equal(actions2[0].type, 'map');
+					assert.equal(actions2[0].mapping.foo, 'bar');
+					assert.equal(actions2[0].path, '/qwe/rty/uio');
+					done();
+				}));
+			}));
+		});
 		describe('with .put()', function() {
 			before(function(done) {
 				mfs.createMapping('/a/b/', {map: 333}, protect(done, function(err, actions) {
