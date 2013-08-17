@@ -44,12 +44,12 @@ MFS.prototype.get = function(path, callback) {
 }
 
 MFS.prototype.put = function(path, content, callback) {
-	if(!('/ts' in content)) {
-		content['/ts'] = (new Date()).getTime();
+	if(!('_ts' in content)) {
+		content._ts = util.timeUid();
 	}
 	var parsedPath = parsePath(path);
 	var update = {};
-	update['f.' + parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {'/ts':1}};
+	update['f.' + parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
 	var self = this;
 	this.ensureParent(parsedPath.dirPath, util.protect(callback, function(err) {
 		self.coll.findAndModify({_id: parsedPath.dirPath}, 
@@ -80,7 +80,7 @@ MFS.prototype.ensureParent = function(path, callback) {
 			// Parent directory does not exist.
 			// Create and ensure parent.
 			var doc = {_id: parsed.dirPath, f:{}};
-			doc.f[parsed.fileName] = 1;
+			doc.f[parsed.fileName + '/'] = 1;
 			self.coll.insert(doc, function(err) {
 				if(err) {
 					return callback(err);
@@ -92,7 +92,7 @@ MFS.prototype.ensureParent = function(path, callback) {
 				// Parent dir exists, but does not point to the child
 				// Update it.
 				var update = {};
-				update['f.' + parsed.fileName] = 1;
+				update['f.' + parsed.fileName + '/'] = 1;
 				self.coll.update({_id: parsed.dirPath}, {$set: update}, {safe: true}, callback);
 			} else {
 				// All is well.
@@ -147,25 +147,21 @@ MFS.prototype.getDir = function(path, expandFiles, callback) {
 	}));
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
-	timestamp = timestamp || (new Date()).getTime();
-	this.put(path, {'/ts': timestamp, '/dead': 1}, callback);
+	timestamp = timestamp || util.timeUid();
+	this.put(path, {_ts: timestamp, '/dead': 1}, callback);
 };
 
 MFS.prototype.createMapping = function(path, mapping, callback) {
 	var update = {};
-	if(!('/ts' in mapping)) {
-		mapping['/ts'] = (new Date()).getTime();
+	if(!('_ts' in mapping)) {
+		mapping._ts = util.timeUid();
 	}
-	if(!('/uid' in mapping)) {
-		mapping['/uid'] = Math.floor(Math.random() * 1000000000);
-	}
-	update['/map.' + mapping['/ts'] + '-' + mapping['/uid']] = mapping;
+	update['m.' + mapping._ts] = mapping;
 	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, util.protect(callback, function(err, doc) {
-		if(err) { return callback(err); }
 		var actions = [];
 		var files = doc.f;
 		for(var key in files) {
-			if(Array.isArray(files[key])) {
+			if(key.charAt(key.length-1) != '/') {
 				actions.push({type: 'map', mapping: mapping, path: path + key});
 			} else {
 				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					
