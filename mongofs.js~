@@ -34,7 +34,7 @@ MFS.prototype.get = function(path, callback) {
 		if(vers.length < 1) {
 			return callback(new Error('No versions found for: ' + path));
 		}
-		if(vers[0]['/dead']) {
+		if(vers[0]._dead) {
 			err = new Error('File not found: ' + path);
 			err.fileNotFound = 1;
 			return callback(err);
@@ -50,21 +50,44 @@ MFS.prototype.put = function(path, content, callback) {
 	var parsedPath = parsePath(path);
 	var update = {};
 	update['f.' + parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
+	var fields = {m: 1};
+	fields['f.' + parsedPath.fileName] = 1;
 	var self = this;
-	this.ensureParent(parsedPath.dirPath, util.protect(callback, function(err) {
-		self.coll.findAndModify({_id: parsedPath.dirPath}, 
-			{_id:1}, 
-			{$push: update}, 
-			{safe: true, upsert: true}, 
-			util.protect(callback, function(err, doc) {
-				var mappings = doc.m;
+	this.coll.findAndModify({_id: parsedPath.dirPath}, 
+		{_id:1}, 
+		{$push: update}, 
+		{safe: true, upsert: true, fields: fields},
+		util.protect(callback, function(err, doc) {
+			var mappings = doc.m;
+			if(doc.f) {
+				var actions = [];
+				var vers = doc.f[parsedPath.fileName];
+				if(!vers) {
+					actions = [];
+					for(key in mappings) {
+						actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
+					}
+					return callback(undefined, actions);
+				}
+				var latest = vers[vers.length - 1];
+				if(latest._ts < content._ts) {
+					for(key in mappings) {
+						actions.push({type: 'unmap', mapping: mappings[key], path: path, content: latest});
+						actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
+					}
+				}
+				return callback(undefined, actions);
+			} else if(mappings) {
 				var actions = [];
 				for(key in mappings) {
-					actions.push({type: 'map', mapping: mappings[key], path: path});
+					actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
 				}
-				callback(undefined, actions);
-			}));
-	}));
+				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, actions); });
+			} else {
+console.log(path + ' 7');
+				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, []); });
+			}
+		}));
 };
 
 MFS.prototype.ensureParent = function(path, callback) {
@@ -73,7 +96,7 @@ MFS.prototype.ensureParent = function(path, callback) {
 	}
 	var parsed = parsePath(path.substr(0, path.length - 1));
 	var proj = {};
-	proj[parsed.fileName] = 1;
+	proj['f.' + parsed.fileName] = 1;
 	var self = this;
 	this.coll.find({_id: parsed.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
 		if(docs.length == 0) {
@@ -148,7 +171,7 @@ MFS.prototype.getDir = function(path, expandFiles, callback) {
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
 	timestamp = timestamp || util.timeUid();
-	this.put(path, {_ts: timestamp, '/dead': 1}, callback);
+	this.put(path, {_ts: timestamp, _dead: 1}, callback);
 };
 
 MFS.prototype.createMapping = function(path, mapping, callback) {
@@ -157,14 +180,18 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 		mapping._ts = util.timeUid();
 	}
 	update['m.' + mapping._ts] = mapping;
-	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true}, util.protect(callback, function(err, doc) {
+	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true, fields: {f: 1}}, util.protect(callback, function(err, doc) {
 		var actions = [];
 		var files = doc.f;
 		for(var key in files) {
 			if(key.charAt(key.length-1) != '/') {
-				actions.push({type: 'map', mapping: mapping, path: path + key});
+				var vers = files[key];
+				if(vers.length == 0) continue;
+				var lastVer = vers[vers.length - 1];
+				if(lastVer._dead) continue;
+				actions.push({type: 'map', mapping: mapping, path: path + key, value: lastVer});
 			} else {
-				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key + '/'});					
+				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: path + key});					
 			}
 		}
 		return callback(undefined, actions);
@@ -173,7 +200,37 @@ MFS.prototype.createMapping = function(path, mapping, callback) {
 MFS.prototype.trampoline = function(action, callback) { 
 	if(action.internalType == 'map') {
 		this.createMapping(action.path, action.mapping, callback);
+	} else if(action.internalType == 'unmap') {
+		this.removeMapping(action.path, action.mapping._ts, callback);
+	} else {
+		return callback(new Error('Operation ' + action.internalType + ' not supported'));
 	}
+};
+
+MFS.prototype.removeMapping = function(path, ts, callback) {
+	var unset = {};
+	unset['m.' + ts] = 0;
+	var fields = {f:1};
+	fields['m.' + ts] = 1;
+	this.coll.findAndModify({_id: path}, {_id:1}, {$unset: unset}, {safe: true, fields: fields}, util.protect(callback, function(err, doc) {
+		var files = doc.f;
+		if(!files) {
+			return callback(undefined, []);
+		}
+		var mapping = doc.m[ts];
+		if(!mapping) {
+			throw new Error('No mapping ' + ts + ' at path ' + path);
+		}
+		var actions = [];
+		for(key in files) {
+			if(key.charAt(key.length-1) != '/') {
+				actions.push({type: 'unmap', mapping: mapping, path: path + key});
+			} else {
+				actions.push({type: 'tramp', internalType: 'unmap', mapping: mapping, path: path + key});					
+			}
+		}
+		callback(undefined, actions);
+	}));
 };
 exports.MFS = MFS;
 

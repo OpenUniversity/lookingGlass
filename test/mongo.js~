@@ -129,8 +129,8 @@ describe('MongoFS', function() {
 		});
 		it('should retrieve the names of all files and sub-dirs in the directory', function(done) {
 			mfs.getDir('/a/', false, protect(done, function(err, content) {
-				assert(content.b, 'b/');
-				assert(content.j, 'j/');
+				assert(content['b/'], 'b/');
+				assert(content['j/'], 'j/');
 				done();
 			}));
 		});
@@ -169,6 +169,14 @@ describe('MongoFS', function() {
 		});
 	});
 
+	function actionsToMappings(actions) {
+		var mappings = {};
+		for(var i = 0; i < actions.length; i++) {
+			var action = actions[i];
+			mappings[action.type + ':' + action.path] = action;
+		}
+		return mappings;
+	}
 	describe('.createMapping(path, mapping, callback(err, actions))', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {a:1},'/a/b/d': {a:2},'/a/b/e': {a:3},'/a/b/f/g': {a:4}}, done);
@@ -186,22 +194,12 @@ describe('MongoFS', function() {
 				}));
 			}));
 		});
-		function actionsToMappings(actions) {
-			var mappings = {};
-			for(var i = 0; i < actions.length; i++) {
-				var action = actions[i];
-				if(action.type == 'map') {
-					mappings[action.path] = action.mapping;
-				}
-			}
-			return mappings;
-		}
 		it('should emit actions including the mapping for all files in the directory', function(done) {
 			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
 				var mappings = actionsToMappings(actions);
-				assert(mappings['/a/b/c'], 'Valid mapping for /a/b/c');
-				assert(mappings['/a/b/d'], 'Valid mapping for /a/b/d');
-				assert(mappings['/a/b/e'], 'Valid mapping for /a/b/e');
+				assert(mappings['map:/a/b/c'], 'Valid mapping for /a/b/c');
+				assert(mappings['map:/a/b/d'], 'Valid mapping for /a/b/d');
+				assert(mappings['map:/a/b/e'], 'Valid mapping for /a/b/e');
 				done();
 			}));
 		});
@@ -209,10 +207,10 @@ describe('MongoFS', function() {
 			mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
 				trampoline(mfs, actions, protect(done, function(err, actions) {
 					var mappings = actionsToMappings(actions);
-					assert(mappings['/a/b/c'], 'Valid mapping for /a/b/c');
-					assert(mappings['/a/b/d'], 'Valid mapping for /a/b/d');
-					assert(mappings['/a/b/e'], 'Valid mapping for /a/b/e');
-					assert(mappings['/a/b/f/g'], 'Valid mapping for /a/b/f/g');
+					assert(mappings['map:/a/b/c'], 'Valid mapping for /a/b/c');
+					assert(mappings['map:/a/b/d'], 'Valid mapping for /a/b/d');
+					assert(mappings['map:/a/b/e'], 'Valid mapping for /a/b/e');
+					assert(mappings['map:/a/b/f/g'], 'Valid mapping for /a/b/f/g');
 					done();
 				}));
 			}));
@@ -234,7 +232,7 @@ describe('MongoFS', function() {
 					trampoline(mfs, actions, done);
 				}));
 			});
-			it('should cause subsequent calls to .put() emit the mapping for the new object', function(done) {
+			it.only('should cause subsequent calls to .put() emit the mapping for the new object', function(done) {
 				mfs.put('/a/b/g', {a:7}, protect(done, function(err, actions) {
 					for(var i = 0; i < actions.length; i++) {
 						if(actions[i].type == 'map' && 
@@ -246,23 +244,51 @@ describe('MongoFS', function() {
 					done(new Error('Could not find action relating to this mapping. Found: ' + JSON.stringify(actions)));
 				}));
 			});
+			it('should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one', function(done) {
+				util.seq([
+					function(_) { mfs.put('/x/y', {value: 'old'}, _); },
+					function(_) { mfs.createMapping('/x/', {map: 1}, _.to('actions')); },
+					function(_) { trampoline(mfs, this.actions, _); },
+					function(_) { setTimeout(_, 2); },
+					function(_) { mfs.put('/x/y', {value: 'new'}, _.to('actions')); },
+					function(_) {
+						var mappings = actionsToMappings(this.actions);
+						assert(mappings['map:/x/y'], 'New value mapped');
+						assert.equal(mappings['map:/x/y'].content.value, 'new');
+						assert(mappings['unmap:/x/y'], 'Old value unmapped');
+						assert.equal(mappings['unmap:/x/y'].content.value, 'old');
+						_();
+					},
+				], done)();
+			});
 		});
 	});
-/*	describe('.removeMapping(path, tsid, callback(err, actions))', function() {
-		var mapping = {m:1};
+	describe('.removeMapping(path, tsid, callback(err, actions))', function() {
+		var mapping = {m:1, _ts: util.timeUid()};
 		before(function(done) {
 			util.seq([
 				function(_) { mfs.put('/e/f/g', {a:1}, _); },
 				function(_) { mfs.put('/e/f/h', {a:2}, _); },
 				function(_) { mfs.put('/e/f/i/j', {a:3}, _); },
 				function(_) { mfs.put('/e/f/i/k', {a:4}, _); },
-				function(_) { mfs.createMapping('/e/f/', mapping, _.to('actions'); },
+				function(_) { mfs.createMapping('/e/f/', mapping, _.to('actions')); },
 				function(_) { trampoline(mfs, this.actions, _); },
 			], done)();
 		})
 		it('should remove the mapping with tsid from path, and produce actions to undo its effect', function(done) {
-			
+			util.seq([
+				function(_) { mfs.removeMapping('/e/f/', mapping._ts, _.to('actions')); },
+				function(_) { trampoline(mfs, this.actions, _.to('actions')); },
+				function(_) { 
+					var mapping = actionsToMappings(this.actions);
+					assert(mapping['unmap:/e/f/g'], 'unmap:/e/f/g');
+					assert(mapping['unmap:/e/f/h'], 'unmap:/e/f/h');
+					assert(mapping['unmap:/e/f/i/j'], 'unmap:/e/f/i/j');
+					assert(mapping['unmap:/e/f/i/k'], 'unmap:/e/f/i/k');
+					_();
+				},
+			], done)();
 		});
-	});*/
+	});
 });
 

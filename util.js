@@ -22,21 +22,35 @@ exports.shouldFail = function(done, desc, func) {
 	}
 }
 
-function funcCompose(f, g) {
-	return function() {
-		f(g);
+function funcCompose(f, g, obj) {
+	var func = function() {
+		f.call(obj, g);
 	}
+	return func;
 }
 
 exports.seq = function(funcs, done) {
+	var obj = {};
 	var f = done;
+	var to = function() {
+		var callback = this;
+		var names = arguments;
+		return function() {
+			for(var i = 0; i < names.length; i++) {
+				obj[names[i]] = arguments[i+1];
+			}
+			return callback.apply(obj, arguments);
+		};
+	};
 	for(var i = funcs.length - 1; i >= 0; i--) {
-		f = exports.protect(done, funcCompose(funcs[i], f));
+		var newF = exports.protect(done, funcCompose(funcs[i], f, obj, []));
+		newF.to = to;
+		f = newF;
 	}
 	return f;
 }
 
-var MAX_UID = 0x1000000;
+var MAX_UID = 0x100000000; // 36 bits
 
 exports.timeUid = function() {
 	var time = (new Date()).getTime().toString(16);

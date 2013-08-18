@@ -1,3 +1,5 @@
+describe('util', function() {
+
 var util = require('../util.js');
 var assert = require('assert');
 
@@ -29,12 +31,22 @@ describe('seq(funcs, done)', function() {
 			function(_) {setTimeout(_, 10);}
 		], done)();
 	});
+	describe('_.to(names...)', function() {
+		it('should return a function that places the corresponding arguments in "this" (skipping err)', function(done) {
+			util.seq([
+				function(_) { _.to('a', 'b', 'c')(undefined, 1, 2, 3); },
+				function(_) { assert.equal(this.a, 1); _(); },
+				function(_) { assert.equal(this.b, 2); _(); },
+				function(_) { assert.equal(this.c, 3); _(); },
+			], done)();
+		});
+	});
 });
 
 describe('timeUid()', function() {
 	it('should return a unique string', function() {
 		var vals = {};
-		for(var i = 0; i < 1000; i++) {
+		for(var i = 0; i < 10000; i++) {
 			var tuid = util.timeUid();
 			assert.equal(typeof(tuid), 'string');
 			assert(!(tuid in vals), 'Value not unique');
@@ -49,5 +61,7 @@ describe('timeUid()', function() {
 			function(_) { assert(b > a, 'Later value is not larger than earlier'); _();},
 		], done)();
 	});
+});
+
 });
 
