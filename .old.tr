@@ -25,5 +25,5 @@
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
 
-  25 passing (264 ms)
+  25 passing (320 ms)
 

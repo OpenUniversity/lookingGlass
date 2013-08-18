@@ -146,6 +146,20 @@ mfs.put('/hello/world', {hello: 'world'}, protect(done, function(err) {
 }));
 ```
 
+should assign a timestamp to a file if one is not provided.
+
+```js
+mfs.put('/hello/file', {key: 123}, protect(done, function(err) {
+	mfs.get('/hello/file', protect(done, function(err, file) {
+		var ts = file._ts;
+		assert(ts, 'file timestamp');
+		var now = util.timeUid();
+		assert(now > ts, 'now > ts');
+		done();
+	}));
+}));
+```
+
 should reflect the provided timestamp if one is given.
 
 ```js
