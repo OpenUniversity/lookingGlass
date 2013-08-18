@@ -26,5 +26,5 @@
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
 
-  26 passing (260 ms)
+  26 passing (264 ms)
 

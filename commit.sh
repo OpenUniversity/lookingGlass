@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/sh -x
+set -e
 mocha -R list | sed 's/:[^:]*$//' > .new.tr
-comment=`diff .old.tr .new.tr`
+comment=`diff .old.tr .new.tr || echo`
 mocha -R markdown > README.md
 mv .new.tr .old.tr
 git add .
