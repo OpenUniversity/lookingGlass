@@ -61,7 +61,6 @@ describe('timeUid()', function() {
 			function(_) { assert(b > a, 'Later value is not larger than earlier'); _();},
 		], done)();
 	});
-	it('should do something new');
 });
 
 });

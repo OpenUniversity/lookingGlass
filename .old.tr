@@ -6,7 +6,6 @@
     util seq(funcs, done) _.to(names...) should return a function that places the corresponding arguments in "this" (skipping err): [2K[0G  ․ util seq(funcs, done) _.to(names...) should return a function that places the corresponding arguments in "this" (skipping err)
     util timeUid() should return a unique string: [2K[0G  ․ util timeUid() should return a unique string
     util timeUid() should return a larger value when called over one millisecond later: [2K[0G  ․ util timeUid() should return a larger value when called over one millisecond later
-  - util timeUid() should do something new
     MongoFS should retrieve the value with placed with the highest _ts value: [2K[0G  ․ MongoFS should retrieve the value with placed with the highest _ts value
     MongoFS .get(path, callback(err, file)) should retrieve the value of a file: [2K[0G  ․ MongoFS .get(path, callback(err, file)) should retrieve the value of a file
     MongoFS .get(path, callback(err, file)) should retrieve the last value in the array, regardless of the _ts value: [2K[0G  ․ MongoFS .get(path, callback(err, file)) should retrieve the last value in the array, regardless of the _ts value
@@ -26,6 +25,5 @@
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
 
-  25 passing (269 ms)
-  1 pending
+  25 passing (264 ms)
 
