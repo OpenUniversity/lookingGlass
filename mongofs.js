@@ -43,6 +43,16 @@ MFS.prototype.get = function(path, callback) {
 	}));
 }
 
+function createMappingActions(action, path, content, mappings) {
+	var actions = [];
+	if(content._dead) return [];
+
+	for(key in mappings) {
+		actions.push({type: action, mapping: mappings[key], path: path, content: content});
+	}
+	return actions;
+}
+
 MFS.prototype.put = function(path, content, callback) {
 	if(!('_ts' in content)) {
 		content._ts = util.timeUid();
@@ -63,25 +73,17 @@ MFS.prototype.put = function(path, content, callback) {
 				var actions = [];
 				var vers = doc.f[parsedPath.fileName];
 				if(!vers) {
-					actions = [];
-					for(key in mappings) {
-						actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
-					}
-					return callback(undefined, actions);
+					return callback(undefined, createMappingActions('map', path, content, mappings));
 				}
 				var latest = vers[vers.length - 1];
 				if(latest._ts < content._ts) {
-					for(key in mappings) {
-						actions.push({type: 'unmap', mapping: mappings[key], path: path, content: latest});
-						actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
-					}
+					return callback(undefined, createMappingActions('map', path, content, mappings)
+						.concat(createMappingActions('unmap', path, latest, mappings)));
+				} else {
+					return callback(undefined, []);
 				}
-				return callback(undefined, actions);
 			} else if(mappings) {
-				var actions = [];
-				for(key in mappings) {
-					actions.push({type: 'map', mapping: mappings[key], path: path, content: content});
-				}
+				var actions = createMappingActions('map', path, content, mappings);
 				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, actions); });
 			} else {
 				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, []); });

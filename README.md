@@ -11,6 +11,7 @@
      - [.remove(path, timestamp, callback(err))](#mongofs-removepath-timestamp-callbackerr)
      - [.createMapping(path, mapping, callback(err, actions))](#mongofs-createmappingpath-mapping-callbackerr-actions)
        - [with .put()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-put)
+       - [with .remove()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-remove)
      - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
 <a name=""></a>
  
@@ -332,6 +333,21 @@ util.seq([
 		_();
 	},
 ], done)();
+```
+
+<a name="mongofs-createmappingpath-mapping-callbackerr-actions-with-remove"></a>
+### with .remove()
+should emit unmapping of the removed content.
+
+```js
+mfs.remove('/a/b/c', 0, protect(done, function(err, actions){
+	assert(actions.length >= 1, 'there should be at least one unmap');
+	for(var i = 0; i < actions.length; i++) {
+		assert.equal(actions[i].type, 'unmap');
+		assert.equal(actions[i].path, '/a/b/c');
+	}
+	done();
+}));
 ```
 
 <a name="mongofs-removemappingpath-tsid-callbackerr-actions"></a>

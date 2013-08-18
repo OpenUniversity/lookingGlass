@@ -23,7 +23,8 @@
     MongoFS .createMapping(path, mapping, callback(err, actions)) should work whether or not the directory already exists: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) should work whether or not the directory already exists
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause subsequent calls to .put() emit the mapping for the new object: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause subsequent calls to .put() emit the mapping for the new object
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .put() should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one
+    MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
 
-  25 passing (286 ms)
+  26 passing (260 ms)
 

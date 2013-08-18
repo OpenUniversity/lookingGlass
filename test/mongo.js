@@ -227,8 +227,14 @@ describe('MongoFS', function() {
 			}));
 		});
 		describe('with .put()', function() {
+			var mappingTS = util.timeUid();
 			before(function(done) {
-				mfs.createMapping('/a/b/', {map: 333}, protect(done, function(err, actions) {
+				mfs.createMapping('/a/b/', {map: 333, _ts: mappingTS}, protect(done, function(err, actions) {
+					trampoline(mfs, actions, done);
+				}));
+			});
+			after(function(done) {
+				mfs.removeMapping('/a/b/', mappingTS, protect(done, function(err, actions) {
 					trampoline(mfs, actions, done);
 				}));
 			});
@@ -261,6 +267,31 @@ describe('MongoFS', function() {
 					},
 				], done)();
 			});
+		});
+		describe('with .remove()', function() {
+			var mappingTS = util.timeUid();
+			before(function(done) {
+				mfs.createMapping('/a/b/', {map: 333, _ts: mappingTS}, protect(done, function(err, actions) {
+					trampoline(mfs, actions, done);
+				}));
+			});
+			after(function(done) {
+				mfs.removeMapping('/a/b/', mappingTS, protect(done, function(err, actions) {
+					trampoline(mfs, actions, done);
+				}));
+			});
+
+			it('should emit unmapping of the removed content', function(done) {
+				mfs.remove('/a/b/c', 0, protect(done, function(err, actions){
+					assert(actions.length >= 1, 'there should be at least one unmap');
+					for(var i = 0; i < actions.length; i++) {
+						assert.equal(actions[i].type, 'unmap');
+						assert.equal(actions[i].path, '/a/b/c');
+					}
+					done();
+				}));
+			});
+
 		});
 	});
 	describe('.removeMapping(path, tsid, callback(err, actions))', function() {
