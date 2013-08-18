@@ -63,5 +63,34 @@ describe('timeUid()', function() {
 	});
 });
 
+describe('Encoder(allowedSpecial)', function() {
+	describe('.encode(str)', function() {
+		it('should encode str in a way that will only include letters, digits or characters from allowedSpecial', function() {
+			var specialChars = '!@#$%^&*()_+<>?,./~`\'"[]{}\\|';
+			var allowed = '_-+';
+			var encoder = new util.Encoder(allowed);
+			var enc = encoder.encode('abc' + specialChars + 'XYZ');
+			for(var i = 0; i < specialChars.length; i++) {
+				if(allowed.indexOf(specialChars.charAt(i)) != -1) continue; // Ignore allowed characters
+				assert.equal(enc.indexOf(specialChars.charAt(i)), -1);
+			}
+		});
+		it('should throw an exception if less than three special characters are allowed', function() {
+			assert.throws(function() {
+				util.encode('foo bar', '_+');
+			}, 'at least three special characters must be allowed');
+		});
+	});
+	var specialChars = '!@#$%^&*()_+<>?,./~`\'"[]{}\\|';
+	var allowed = '_-+';
+	describe('.decode(enc)', function() {
+		it('should decode a string encoded with .encode()', function() {
+			var encoder = new util.Encoder(allowed);
+			var str = 'This is a test' + specialChars + ' woo hoo\n';
+			assert.equal(encoder.decode(encoder.encode(str)), str);
+		});
+	});
+});
+
 });
 

@@ -3,6 +3,9 @@
      - [seq(funcs, done)](#util-seqfuncs-done)
        - [_.to(names...)](#util-seqfuncs-done-_tonames)
      - [timeUid()](#util-timeuid)
+     - [Encoder(allowedSpecial)](#util-encoderallowedspecial)
+       - [.encode(str)](#util-encoderallowedspecial-encodestr)
+       - [.decode(enc)](#util-encoderallowedspecial-decodeenc)
    - [MongoFS](#mongofs)
      - [.get(path, callback(err, file))](#mongofs-getpath-callbackerr-file)
      - [.put(path, file, callback(err))](#mongofs-putpath-file-callbackerr)
@@ -96,6 +99,41 @@ util.seq([
 ], done)();
 ```
 
+<a name="util-encoderallowedspecial"></a>
+## Encoder(allowedSpecial)
+<a name="util-encoderallowedspecial-encodestr"></a>
+### .encode(str)
+should encode str in a way that will only include letters, digits or characters from allowedSpecial.
+
+```js
+var specialChars = '!@#$%^&*()_+<>?,./~`\'"[]{}\\|';
+var allowed = '_-+';
+var encoder = new util.Encoder(allowed);
+var enc = encoder.encode('abc' + specialChars + 'XYZ');
+for(var i = 0; i < specialChars.length; i++) {
+	if(allowed.indexOf(specialChars.charAt(i)) != -1) continue; // Ignore allowed characters
+	assert.equal(enc.indexOf(specialChars.charAt(i)), -1);
+}
+```
+
+should throw an exception if less than three special characters are allowed.
+
+```js
+assert.throws(function() {
+	util.encode('foo bar', '_+');
+}, 'at least three special characters must be allowed');
+```
+
+<a name="util-encoderallowedspecial-decodeenc"></a>
+### .decode(enc)
+should decode a string encoded with .encode().
+
+```js
+var encoder = new util.Encoder(allowed);
+var str = 'This is a test' + specialChars + ' woo hoo\n';
+assert.equal(encoder.decode(encoder.encode(str)), str);
+```
+
 <a name="mongofs"></a>
 # MongoFS
 should retrieve the value with placed with the highest _ts value.
@@ -111,6 +149,17 @@ util.seq([
 			_();
 		}));
 	}
+], done)();
+```
+
+should support any kind of characters in paths, with the exception that slash (/) and star (*).
+
+```js
+var path = '/!@#/$%^/&()/-=+_/,.?<>';
+util.seq([
+	function(_) { mfs.put(path, {foo: 'bar'}, _); },
+	function(_) { mfs.get(path, _.to('content')); },
+	function(_) { assert.equal(this.content.foo, 'bar'); _(); },
 ], done)();
 ```
 
@@ -356,14 +405,14 @@ should remove the mapping with tsid from path, and produce actions to undo its e
 
 ```js
 util.seq([
-	function(_) { mfs.removeMapping('/e/f/', mapping._ts, _.to('actions')); },
+	function(_) { mfs.removeMapping('/e/f!/', mapping._ts, _.to('actions')); },
 	function(_) { trampoline(mfs, this.actions, _.to('actions')); },
 	function(_) { 
 		var mapping = actionsToMappings(this.actions);
-		assert(mapping['unmap:/e/f/g'], 'unmap:/e/f/g');
-		assert(mapping['unmap:/e/f/h'], 'unmap:/e/f/h');
-		assert(mapping['unmap:/e/f/i/j'], 'unmap:/e/f/i/j');
-		assert(mapping['unmap:/e/f/i/k'], 'unmap:/e/f/i/k');
+		assert(mapping['unmap:/e/f!/g'], 'unmap:/e/f!/g');
+		assert(mapping['unmap:/e/f!/h'], 'unmap:/e/f!/h');
+		assert(mapping['unmap:/e/f!/i/j'], 'unmap:/e/f!/i/j');
+		assert(mapping['unmap:/e/f!/i/k'], 'unmap:/e/f!/i/k');
 		_();
 	},
 ], done)();

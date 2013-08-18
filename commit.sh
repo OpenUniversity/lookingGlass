@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh
 set -e
 mocha -R list | sed 's/:[^:]*$//' > .new.tr
 comment=`diff .old.tr .new.tr | sed 1d || echo`

@@ -59,3 +59,54 @@ exports.timeUid = function() {
 	return time + uid; // string concatenation
 }
 
+
+exports.Encoder = function(allowedSpecial) {
+	if(allowedSpecial.length < 3) {
+		throw new Error('at least three special characters must be allowed. Given: "' + allowedSpecial + '"');
+	}
+	function buildEscapedCharString(allowed) {
+		var chars = '';
+		for(var i = 0; i < 128; i++) {
+			var c = String.fromCharCode(i);
+			if(allowed.indexOf(c) == -1) {
+				chars += c;
+			}
+		}
+		return chars;
+	}
+	var regularChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	var allowed = regularChars + allowedSpecial.substr(0, allowedSpecial.length-1);
+	var escapedChars = buildEscapedCharString(allowed);
+	var esc = allowedSpecial.charAt(allowedSpecial.length - 1);
+
+	this.encode = function(str) {
+		var enc = '';
+		for(var i = 0; i < str.length; i++) {
+			var c = str.charAt(i);
+			var index = escapedChars.indexOf(c);
+			if(index != -1) {
+				enc += esc + allowed.charAt(index);
+			} else {
+				enc += c;
+			}
+		}
+		return enc;
+	}
+	
+	this.decode = function(str) {
+		var dec = '';
+		for(var i = 0; i < str.length; i++) {
+			var c = str.charAt(i);
+			if(c == esc) {
+				i++;
+				c = str.charAt(i);
+				dec += escapedChars.charAt(allowed.indexOf(c));
+			} else {
+				dec += c;
+			}
+		}
+		return dec;
+	}
+	
+};
+

@@ -298,28 +298,36 @@ describe('MongoFS', function() {
 		var mapping = {m:1, _ts: util.timeUid()};
 		before(function(done) {
 			util.seq([
-				function(_) { mfs.put('/e/f/g', {a:1}, _); },
-				function(_) { mfs.put('/e/f/h', {a:2}, _); },
-				function(_) { mfs.put('/e/f/i/j', {a:3}, _); },
-				function(_) { mfs.put('/e/f/i/k', {a:4}, _); },
-				function(_) { mfs.createMapping('/e/f/', mapping, _.to('actions')); },
+				function(_) { mfs.put('/e/f!/g', {a:1}, _); },
+				function(_) { mfs.put('/e/f!/h', {a:2}, _); },
+				function(_) { mfs.put('/e/f!/i/j', {a:3}, _); },
+				function(_) { mfs.put('/e/f!/i/k', {a:4}, _); },
+				function(_) { mfs.createMapping('/e/f!/', mapping, _.to('actions')); },
 				function(_) { trampoline(mfs, this.actions, _); },
 			], done)();
 		})
 		it('should remove the mapping with tsid from path, and produce actions to undo its effect', function(done) {
 			util.seq([
-				function(_) { mfs.removeMapping('/e/f/', mapping._ts, _.to('actions')); },
+				function(_) { mfs.removeMapping('/e/f!/', mapping._ts, _.to('actions')); },
 				function(_) { trampoline(mfs, this.actions, _.to('actions')); },
 				function(_) { 
 					var mapping = actionsToMappings(this.actions);
-					assert(mapping['unmap:/e/f/g'], 'unmap:/e/f/g');
-					assert(mapping['unmap:/e/f/h'], 'unmap:/e/f/h');
-					assert(mapping['unmap:/e/f/i/j'], 'unmap:/e/f/i/j');
-					assert(mapping['unmap:/e/f/i/k'], 'unmap:/e/f/i/k');
+					assert(mapping['unmap:/e/f!/g'], 'unmap:/e/f!/g');
+					assert(mapping['unmap:/e/f!/h'], 'unmap:/e/f!/h');
+					assert(mapping['unmap:/e/f!/i/j'], 'unmap:/e/f!/i/j');
+					assert(mapping['unmap:/e/f!/i/k'], 'unmap:/e/f!/i/k');
 					_();
 				},
 			], done)();
 		});
+	});
+	it('should support any kind of characters in paths, with the exception that slash (/) and star (*)', function(done) {
+		var path = '/!@#/$%^/&()/-=+_/,.?<>';
+		util.seq([
+			function(_) { mfs.put(path, {foo: 'bar'}, _); },
+			function(_) { mfs.get(path, _.to('content')); },
+			function(_) { assert.equal(this.content.foo, 'bar'); _(); },
+		], done)();
 	});
 });
 
