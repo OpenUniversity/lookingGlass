@@ -12,11 +12,6 @@
      - [.createMapping(path, mapping, callback(err, actions))](#mongofs-createmappingpath-mapping-callbackerr-actions)
        - [with .put()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-put)
      - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
-   - [Array](#array)
-     - [.indexOf()](#array-indexof)
-     - [.push()](#array-push)
-   - [fs](#fs)
-     - [#createReadStream](#fs-createreadstream)
 <a name=""></a>
  
 <a name="util"></a>
@@ -356,53 +351,5 @@ util.seq([
 		_();
 	},
 ], done)();
-```
-
-<a name="array"></a>
-# Array
-<a name="array-indexof"></a>
-## .indexOf()
-should return -1 when the value is not present.
-
-```js
-assert.equal(-1, [1,2,3].indexOf(5));
-assert.equal(-1, [1,2,3].indexOf(0));
-```
-
-should return the index when the value is present.
-
-```js
-assert.equal(0, [1,2,3].indexOf(1));
-assert.equal(2, [1,2,3].indexOf(3));
-```
-
-<a name="array-push"></a>
-## .push()
-should add a value to the end of the array.
-
-```js
-var a = [1, 2, 3];
-a.push(4);
-assert.equal(4, a.length);
-assert.equal(4, a[3]);
-```
-
-<a name="fs"></a>
-# fs
-<a name="fs-createreadstream"></a>
-## #createReadStream
-should read the content of a given file.
-
-```js
-var f = fs.createReadStream('hello.txt');
-var str = '';
-f.on('data', function(data) {
-	str += data.toString('utf-8');
-});
-f.on('end', function(err) {
-	if(err) return done(err);
-	assert.equal('Hello, World', str);
-	done();
-});
 ```
 
