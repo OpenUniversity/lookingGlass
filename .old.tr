@@ -31,5 +31,5 @@
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
     MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically
 
-  31 passing (289 ms)
+  31 passing (315 ms)
 

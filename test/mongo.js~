@@ -250,7 +250,7 @@ describe('MongoFS', function() {
 					done(new Error('Could not find action relating to this mapping. Found: ' + JSON.stringify(actions)));
 				}));
 			});
-			it.only('should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one', function(done) {
+			it('should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one', function(done) {
 				util.seq([
 					function(_) { mfs.put('/x?/y', {value: 'old'}, _); },
 					function(_) { mfs.createMapping('/x?/', {map: 1}, _.to('actions')); },
@@ -333,16 +333,16 @@ describe('MongoFS', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {x:1}, '/a/b/d': {x:2}}, done);
 		});
-		function actionsToContentMap(results) {
-			var contentMap = {}
-			for(var i = 0; i < results.length; i++) {
-				if(results[i].type == 'content') {
-					contentMap[results[i].path] = results[i].content;
-				}
-			}
-			return contentMap;
-		}
 		it('should allow for multiple get and put operations to be performed atomically', function(done) {
+			function actionsToContentMap(results) {
+				var contentMap = {}
+				for(var i = 0; i < results.length; i++) {
+					if(results[i].type == 'content') {
+						contentMap[results[i].path] = results[i].content;
+					}
+				}
+				return contentMap;
+			}
 			mfs.transaction({
 				path: '/a/b/',
 				get: ['c', 'd'],

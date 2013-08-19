@@ -430,6 +430,7 @@ mfs.transaction({
 	put: {c: {x:3}, d: {x:4}}
 }, protect(done, function(err, actions) {
 	var contentMap = actionsToContentMap(actions);
+	// The values received from the 'get' operation are from before the transaction.
 	assert.equal(contentMap['/a/b/c'].x, 1);
 	assert.equal(contentMap['/a/b/d'].x, 2);
 	mfs.transaction({
@@ -439,9 +440,19 @@ mfs.transaction({
 		var contentMap = actionsToContentMap(actions);
 		assert.equal(contentMap['/a/b/c'].x, 3);
 		assert.equal(contentMap['/a/b/d'].x, 4);
+		// The new values have the same timestamp.
 		assert.equal(contentMap['/a/b/c']._ts, contentMap['/a/b/d']._ts);
 		done();
 	}));
 }));
+function actionsToContentMap(results) {
+	var contentMap = {}
+	for(var i = 0; i < results.length; i++) {
+		if(results[i].type == 'content') {
+			contentMap[results[i].path] = results[i].content;
+		}
+	}
+	return contentMap;
+}
 ```
 
