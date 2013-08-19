@@ -93,7 +93,7 @@ describe('MongoFS', function() {
 			}));
 		});
 	});
-	it('should retrieve the value with placed with the highest _ts value', function(done) {
+	it('should retrieve the value with the highest _ts value', function(done) {
 		util.seq([
 			function(_) {mfs.put('/some/path/to/doc', {foo: 'bar', _ts: 1000}, _); },
 			function(_) {mfs.put('/some/path/to/doc', {foo: 'baz', _ts: 3000}, _); },
@@ -252,17 +252,17 @@ describe('MongoFS', function() {
 			});
 			it('should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one', function(done) {
 				util.seq([
-					function(_) { mfs.put('/x/y', {value: 'old'}, _); },
-					function(_) { mfs.createMapping('/x/', {map: 1}, _.to('actions')); },
+					function(_) { mfs.put('/x?/y', {value: 'old'}, _); },
+					function(_) { mfs.createMapping('/x?/', {map: 1}, _.to('actions')); },
 					function(_) { trampoline(mfs, this.actions, _); },
 					function(_) { setTimeout(_, 2); },
-					function(_) { mfs.put('/x/y', {value: 'new'}, _.to('actions')); },
+					function(_) { mfs.put('/x?/y', {value: 'new'}, _.to('actions')); },
 					function(_) {
 						var mappings = actionsToMappings(this.actions);
-						assert(mappings['map:/x/y'], 'New value mapped');
-						assert.equal(mappings['map:/x/y'].content.value, 'new');
-						assert(mappings['unmap:/x/y'], 'Old value unmapped');
-						assert.equal(mappings['unmap:/x/y'].content.value, 'old');
+						assert(mappings['map:/x?/y'], 'New value mapped');
+						assert.equal(mappings['map:/x?/y'].content.value, 'new');
+						assert(mappings['unmap:/x?/y'], 'Old value unmapped');
+						assert.equal(mappings['unmap:/x?/y'].content.value, 'old');
 						_();
 					},
 				], done)();
@@ -328,6 +328,41 @@ describe('MongoFS', function() {
 			function(_) { mfs.get(path, _.to('content')); },
 			function(_) { assert.equal(this.content.foo, 'bar'); _(); },
 		], done)();
+	});
+	describe('.transaction(trans, callback(err, actions))', function() {
+		before(function(done) {
+			mfs.batchPut({'/a/b/c': {x:1}, '/a/b/d': {x:2}}, done);
+		});
+		function actionsToContentMap(results) {
+			var contentMap = {}
+			for(var i = 0; i < results.length; i++) {
+				if(results[i].type == 'content') {
+					contentMap[results[i].path] = results[i].content;
+				}
+			}
+			return contentMap;
+		}
+		it('should allow for multiple get and put operations to be performed atomically', function(done) {
+			mfs.transaction({
+				path: '/a/b/',
+				get: ['c', 'd'],
+				put: {c: {x:3}, d: {x:4}}
+			}, protect(done, function(err, actions) {
+				var contentMap = actionsToContentMap(actions);
+				assert.equal(contentMap['/a/b/c'].x, 1);
+				assert.equal(contentMap['/a/b/d'].x, 2);
+				mfs.transaction({
+					path: '/a/b/',
+					get: ['c', 'd']
+				}, protect(done, function(err, actions) {
+					var contentMap = actionsToContentMap(actions);
+					assert.equal(contentMap['/a/b/c'].x, 3);
+					assert.equal(contentMap['/a/b/d'].x, 4);
+					assert.equal(contentMap['/a/b/c']._ts, contentMap['/a/b/d']._ts);
+					done();
+				}));
+			}));
+		});
 	});
 });
 

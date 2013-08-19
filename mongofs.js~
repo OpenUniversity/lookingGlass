@@ -16,37 +16,17 @@ function parsePath(path) {
 }
 
 MFS.prototype.get = function(path, callback) {
-	path = this.encoder.encode(path);
 	var parsedPath = parsePath(path);
-	var proj = {};
-	proj['f.' + parsedPath.fileName] = {$slice: -1};
-	this.coll.find({_id: parsedPath.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
-		if(err) return callback(err);
-		if(docs.length < 1) {
-			err = new Error('Path not found: ' + parsedPath.dirPath);
-			err.fileNotFound = 1;
-			return callback(err);
-		}
-		var vers = docs[0].f[parsedPath.fileName];
-		if(!vers) {
-			err = new Error('File not found: ' + path);
-			err.fileNotFound = 1;
-			return callback(err);
-		}
-		if(vers.length < 1) {
-			return callback(new Error('No versions found for: ' + path));
-		}
-		if(vers[0]._dead) {
-			err = new Error('File not found: ' + path);
-			err.fileNotFound = 1;
-			return callback(err);
-		}
-		callback(undefined, vers[0]);
+	this.transaction({
+		path: parsedPath.dirPath,
+		get: [parsedPath.fileName]
+	}, util.protect(callback, function(err, actions) {
+		callback(undefined, actions[0].content);
 	}));
 }
 
 MFS.prototype.createMappingActions = function(action, path, content, mappings) {
-	path = this.encoder.decode(path);
+//	path = this.encoder.decode(path);
 	var actions = [];
 	if(content._dead) return [];
 
@@ -57,43 +37,17 @@ MFS.prototype.createMappingActions = function(action, path, content, mappings) {
 }
 
 MFS.prototype.put = function(path, content, callback) {
-	path = this.encoder.encode(path);
-	if(!('_ts' in content)) {
-		content._ts = util.timeUid();
-	}
 	var parsedPath = parsePath(path);
-
-	var update = {};
-	update['f.' + parsedPath.fileName] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
-	var fields = {m: 1};
-	fields['f.' + parsedPath.fileName] = 1;
-	var self = this;
-	this.coll.findAndModify({_id: parsedPath.dirPath}, 
-		{_id:1}, 
-		{$push: update}, 
-		{safe: true, upsert: true, fields: fields},
-		util.protect(callback, function(err, doc) {
-			var mappings = doc.m;
-			if(doc.f) {
-				var actions = [];
-				var vers = doc.f[parsedPath.fileName];
-				if(!vers) {
-					return callback(undefined, self.createMappingActions('map', path, content, mappings));
-				}
-				var latest = vers[vers.length - 1];
-				if(latest._ts < content._ts) {
-					return callback(undefined, self.createMappingActions('map', path, content, mappings)
-						.concat(self.createMappingActions('unmap', path, latest, mappings)));
-				} else {
-					return callback(undefined, []);
-				}
-			} else if(mappings) {
-				var actions = self.createMappingActions('map', path, content, mappings);
-				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, actions); });
-			} else {
-				self.ensureParent(parsedPath.dirPath, function(err) { callback(err, []); });
-			}
-		}));
+	var put = {};
+	put[parsedPath.fileName] = content;
+	var trans = {
+		path: parsedPath.dirPath,
+		put: put
+	};
+	if(content._ts) {
+		trans._ts = content._ts;
+	}
+	this.transaction(trans, callback);
 };
 
 MFS.prototype.ensureParent = function(path, callback) {
@@ -237,11 +191,143 @@ MFS.prototype.removeMapping = function(path, ts, callback) {
 			if(key.charAt(key.length-1) != '/') {
 				actions.push({type: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});
 			} else {
-				actions.push({type: 'tramp', internalType: 'unmap', mapping: mapping, path: path + key});					
+				actions.push({type: 'tramp', internalType: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});					
 			}
 		}
 		callback(undefined, actions);
 	}));
 };
+function hasFields(obj) {
+	for(var k in obj) {
+		return true;
+	}
+	return false;
+}
+
+MFS.prototype.transaction = function(trans, callback) {
+	if(!('_ts' in trans)) {
+		trans._ts = util.timeUid();
+	}
+	trans.path = this.encoder.encode(trans.path);
+	var update = {};
+	var fields = {};
+	for(var key in trans) {
+		var methodName = 'pre_' + key;
+		if(this[methodName]) {
+			this[methodName](trans[key], update, fields, trans._ts);
+		}
+	}
+	var self = this;
+	var post = util.protect(callback, function(err, doc) {
+		var dirDoesNotExist = false;
+		if(!doc || !doc._id) {
+			dirDoesNotExist = true;
+			doc = {};
+		}
+		var actions = [];
+		for(var key in trans) {
+			var methodName = 'post_' + key;
+			if(self[methodName]) {
+				self[methodName](trans[key], trans.path, doc, actions);
+			}
+		}
+/*		for(var i = 0; i < actions.length; i++) {	
+			if(actions[i].path) {
+				actions[i].path = self.encoder.decode(actions[i].path);
+			}
+		}*/
+		if(dirDoesNotExist) {
+			self.ensureParent(trans.path, util.protect(callback, function() { callback(undefined, actions); }));
+		} else {
+			callback(undefined, actions);
+		}
+	});
+	if(hasFields(update)) {
+		this.coll.findAndModify({_id: trans.path}, {_id:1}, update, {safe: true, upsert: true, fields: fields}, post);
+	} else {
+		this.coll.findOne({_id: trans.path}, fields, post);
+	}
+};
+
+MFS.prototype.pre_get = function(get, update, fields) {
+	for(var i = 0; i < get.length; i++) {
+		var field = this.encoder.encode(get[i]);
+		fields['f.' + field] = 1;
+	}
+};
+
+MFS.prototype.post_get = function(get, path, doc, actions) {
+	for(var i = 0; i < get.length; i++) {
+		var field = this.encoder.encode(get[i]);
+		if(!doc.f) { this.throwFileNotFoundExeption(path + field); }
+		if(!(field in doc.f)) { this.throwFileNotFoundExeption(path + field); }
+		var vers = doc.f[field];
+		if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
+		var content = vers[vers.length - 1];
+		if(content._dead) { this.throwFileNotFoundExeption(path + field); }
+		actions.push({type: 'content', path: path + field, content: content});
+	}
+};
+
+function removeFieldsStartingWith(obj, prefix) {
+	for(var field in obj) {
+		if(field.substr(0, prefix.length) == prefix) {
+			delete obj[field];
+		}
+	}
+}
+
+MFS.prototype.pre_put = function(put, update, fields, ts) {
+	if(!update.$push) {
+		update.$push = {};
+	}
+	for(var field in put) {
+		put[field]._ts = ts;
+		var content = put[field];
+		field = this.encoder.encode(field);
+		update.$push['f.' + field] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
+		fields['f.' + field] = 1;
+	}
+	removeFieldsStartingWith(fields, 'm.');
+	fields.m = 1;
+};
+
+function arrayAppend(array, arrayToAppend) {
+	for(var i = 0; i < arrayToAppend.length; i++) {
+		array.push(arrayToAppend[i]);
+	}
+}
+
+MFS.prototype.post_put = function(put, path, doc, actions) {
+	var mappings = doc.m;
+	if(doc.f) {
+		for(var field in put) {
+			field = this.encoder.encode(field);
+			var content = put[field];
+			var vers = doc.f[field];
+			if(vers) {
+				var latest = vers[vers.length - 1];
+				if(latest._ts < content._ts) {
+					arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings)
+						.concat(this.createMappingActions('unmap', path + field, latest, mappings)));
+				}
+			} else {
+				arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings));
+			}
+		}
+	} else if(mappings) {
+		for(var field in put) {
+			var content = put[field];
+			arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings));
+		}
+	}
+};
+
+MFS.prototype.throwFileNotFoundExeption = function(path) {
+	var err = new Error('File not found: ' + path);
+	err.fileNotFound = 1;
+	throw err;
+}
+
 exports.MFS = MFS;
 

@@ -16,6 +16,7 @@
        - [with .put()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-put)
        - [with .remove()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-remove)
      - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
+     - [.transaction(trans, callback(err, actions))](#mongofs-transactiontrans-callbackerr-actions)
 <a name=""></a>
  
 <a name="util"></a>
@@ -136,7 +137,7 @@ assert.equal(encoder.decode(encoder.encode(str)), str);
 
 <a name="mongofs"></a>
 # MongoFS
-should retrieve the value with placed with the highest _ts value.
+should retrieve the value with the highest _ts value.
 
 ```js
 util.seq([
@@ -368,17 +369,17 @@ should cause put() that overrides an existing value provide mapping for the new 
 
 ```js
 util.seq([
-	function(_) { mfs.put('/x/y', {value: 'old'}, _); },
-	function(_) { mfs.createMapping('/x/', {map: 1}, _.to('actions')); },
+	function(_) { mfs.put('/x?/y', {value: 'old'}, _); },
+	function(_) { mfs.createMapping('/x?/', {map: 1}, _.to('actions')); },
 	function(_) { trampoline(mfs, this.actions, _); },
 	function(_) { setTimeout(_, 2); },
-	function(_) { mfs.put('/x/y', {value: 'new'}, _.to('actions')); },
+	function(_) { mfs.put('/x?/y', {value: 'new'}, _.to('actions')); },
 	function(_) {
 		var mappings = actionsToMappings(this.actions);
-		assert(mappings['map:/x/y'], 'New value mapped');
-		assert.equal(mappings['map:/x/y'].content.value, 'new');
-		assert(mappings['unmap:/x/y'], 'Old value unmapped');
-		assert.equal(mappings['unmap:/x/y'].content.value, 'old');
+		assert(mappings['map:/x?/y'], 'New value mapped');
+		assert.equal(mappings['map:/x?/y'].content.value, 'new');
+		assert(mappings['unmap:/x?/y'], 'Old value unmapped');
+		assert.equal(mappings['unmap:/x?/y'].content.value, 'old');
 		_();
 	},
 ], done)();
@@ -416,5 +417,31 @@ util.seq([
 		_();
 	},
 ], done)();
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions"></a>
+## .transaction(trans, callback(err, actions))
+should allow for multiple get and put operations to be performed atomically.
+
+```js
+mfs.transaction({
+	path: '/a/b/',
+	get: ['c', 'd'],
+	put: {c: {x:3}, d: {x:4}}
+}, protect(done, function(err, actions) {
+	var contentMap = actionsToContentMap(actions);
+	assert.equal(contentMap['/a/b/c'].x, 1);
+	assert.equal(contentMap['/a/b/d'].x, 2);
+	mfs.transaction({
+		path: '/a/b/',
+		get: ['c', 'd']
+	}, protect(done, function(err, actions) {
+		var contentMap = actionsToContentMap(actions);
+		assert.equal(contentMap['/a/b/c'].x, 3);
+		assert.equal(contentMap['/a/b/d'].x, 4);
+		assert.equal(contentMap['/a/b/c']._ts, contentMap['/a/b/d']._ts);
+		done();
+	}));
+}));
 ```
 
