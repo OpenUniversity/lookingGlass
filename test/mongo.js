@@ -365,6 +365,37 @@ describe('MongoFS', function() {
 				return contentMap;
 			}
 		});
+		describe('map', function() {
+			it('should define a single mapping for the directory', function(done) {
+				util.seq([
+					function(_) { mfs.transaction({path: '/a/b/', map: {m:1}}, _.to('actions1')); },
+					function(_) { mfs.transaction({path: '/a/b/', put: {e: {a:12}}}, _.to('actions2')); },
+					function(_) { 
+						var actions = actionsToMappings(this.actions1.concat(this.actions2));
+						assert(actions['map:/a/b/c'], 'map:/a/b/c');
+						assert(actions['map:/a/b/d'], 'map:/a/b/d');
+						assert(actions['map:/a/b/e'], 'map:/a/b/e');
+						_();
+					},
+				], done)();
+			});
+		});
+		describe('unmap', function() {
+			it('should undo the mappings with the given timestamps', function(done) {
+				util.seq([
+					function(_) { mfs.transaction({path: '/a/b/', map: {m:1}, _ts: '12345'}, _); },
+					function(_) { mfs.transaction({path: '/a/b/', put: {e: {a:12}}}, _); },
+					function(_) { mfs.transaction({path: '/a/b/', unmap: ['12345']}, _.to('actions')); },
+					function(_) { 
+						var actions = actionsToMappings(this.actions);
+						assert(actions['unmap:/a/b/c'], 'unmap:/a/b/c');
+						assert(actions['unmap:/a/b/d'], 'unmap:/a/b/d');
+						assert(actions['unmap:/a/b/e'], 'unmap:/a/b/e');
+						_();
+					},
+				], done)();
+			});
+		});
 	});
 });
 

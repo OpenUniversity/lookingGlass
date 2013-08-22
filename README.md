@@ -17,6 +17,8 @@
        - [with .remove()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-remove)
      - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
      - [.transaction(trans, callback(err, actions))](#mongofs-transactiontrans-callbackerr-actions)
+       - [map](#mongofs-transactiontrans-callbackerr-actions-map)
+       - [unmap](#mongofs-transactiontrans-callbackerr-actions-unmap)
 <a name=""></a>
  
 <a name="util"></a>
@@ -454,5 +456,42 @@ function actionsToContentMap(results) {
 	}
 	return contentMap;
 }
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-map"></a>
+### map
+should define a single mapping for the directory.
+
+```js
+util.seq([
+	function(_) { mfs.transaction({path: '/a/b/', map: {m:1}}, _.to('actions1')); },
+	function(_) { mfs.transaction({path: '/a/b/', put: {e: {a:12}}}, _.to('actions2')); },
+	function(_) { 
+		var actions = actionsToMappings(this.actions1.concat(this.actions2));
+		assert(actions['map:/a/b/c'], 'map:/a/b/c');
+		assert(actions['map:/a/b/d'], 'map:/a/b/d');
+		assert(actions['map:/a/b/e'], 'map:/a/b/e');
+		_();
+	},
+], done)();
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-unmap"></a>
+### unmap
+should undo the mappings with the given timestamps.
+
+```js
+util.seq([
+	function(_) { mfs.transaction({path: '/a/b/', map: {m:1}, _ts: '12345'}, _); },
+	function(_) { mfs.transaction({path: '/a/b/', put: {e: {a:12}}}, _); },
+	function(_) { mfs.transaction({path: '/a/b/', unmap: ['12345']}, _.to('actions')); },
+	function(_) { 
+		var actions = actionsToMappings(this.actions);
+		assert(actions['unmap:/a/b/c'], 'unmap:/a/b/c');
+		assert(actions['unmap:/a/b/d'], 'unmap:/a/b/d');
+		assert(actions['unmap:/a/b/e'], 'unmap:/a/b/e');
+		_();
+	},
+], done)();
 ```
 

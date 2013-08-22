@@ -135,29 +135,7 @@ MFS.prototype.remove = function(path, timestamp, callback) {
 };
 
 MFS.prototype.createMapping = function(path, mapping, callback) {
-	path = this.encoder.encode(path);
-	var update = {};
-	if(!('_ts' in mapping)) {
-		mapping._ts = util.timeUid();
-	}
-	update['m.' + mapping._ts] = mapping;
-	var self = this;
-	this.coll.findAndModify({_id: path}, {_id: 1}, {$set: update}, {safe: true, upsert: true, fields: {f: 1}}, util.protect(callback, function(err, doc) {
-		var actions = [];
-		var files = doc.f;
-		for(var key in files) {
-			if(key.charAt(key.length-1) != '/') {
-				var vers = files[key];
-				if(vers.length == 0) continue;
-				var lastVer = vers[vers.length - 1];
-				if(lastVer._dead) continue;
-				actions.push({type: 'map', mapping: mapping, path: self.encoder.decode(path + key), value: lastVer});
-			} else {
-				actions.push({type: 'tramp', internalType: 'map', mapping: mapping, path: self.encoder.decode(path + key)});					
-			}
-		}
-		return callback(undefined, actions);
-	}));
+	this.transaction({path: path, map: mapping, _ts: mapping._ts}, callback);
 };
 MFS.prototype.trampoline = function(action, callback) { 
 	if(action.internalType == 'map') {
@@ -170,31 +148,7 @@ MFS.prototype.trampoline = function(action, callback) {
 };
 
 MFS.prototype.removeMapping = function(path, ts, callback) {
-	path = this.encoder.encode(path);
-	var unset = {};
-	unset['m.' + ts] = 0;
-	var fields = {f:1};
-	fields['m.' + ts] = 1;
-	var self = this;
-	this.coll.findAndModify({_id: path}, {_id:1}, {$unset: unset}, {safe: true, fields: fields}, util.protect(callback, function(err, doc) {
-		var files = doc.f;
-		if(!files) {
-			return callback(undefined, []);
-		}
-		var mapping = doc.m[ts];
-		if(!mapping) {
-			throw new Error('No mapping ' + ts + ' at path ' + path);
-		}
-		var actions = [];
-		for(key in files) {
-			if(key.charAt(key.length-1) != '/') {
-				actions.push({type: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});
-			} else {
-				actions.push({type: 'tramp', internalType: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});					
-			}
-		}
-		callback(undefined, actions);
-	}));
+	this.transaction({path: path, unmap: [ts]}, callback);
 };
 function hasFields(obj) {
 	for(var k in obj) {
@@ -327,6 +281,51 @@ MFS.prototype.throwFileNotFoundExeption = function(path) {
 	err.fileNotFound = 1;
 	throw err;
 }
+
+MFS.prototype.pre_map = function(map, update, fields, ts) {
+	if(!update.$set) {
+		update.$set = {};
+	}
+	update.$set['m.' + ts] = map;
+	fields.f = 1;
+};
+MFS.prototype.post_map = function(map, path, doc, actions) {
+	var files = doc.f;
+	for(var key in files) {
+		if(key.charAt(key.length-1) != '/') {
+			var vers = files[key];
+			if(vers.length == 0) continue;
+			var lastVer = vers[vers.length - 1];
+			if(lastVer._dead) continue;
+			actions.push({type: 'map', mapping: map, path: this.encoder.decode(path + key), value: lastVer});
+		} else {
+			actions.push({type: 'tramp', internalType: 'map', mapping: map, path: this.encoder.decode(path + key)});					
+		}
+	}
+};
+
+MFS.prototype.pre_unmap = function(map, update, fields, ts) {
+	if(!update.$unset) {
+		update.$unset = {};
+	}
+	update.$unset['m.' + ts] = 0;
+	fields.f = 1;
+};
+MFS.prototype.post_unmap = function(map, path, doc, actions) {
+	var files = doc.f;
+	for(var key in files) {
+		if(key.charAt(key.length-1) != '/') {
+			var vers = files[key];
+			if(vers.length == 0) continue;
+			var lastVer = vers[vers.length - 1];
+			if(lastVer._dead) continue;
+			actions.push({type: 'unmap', mapping: map, path: this.encoder.decode(path + key), value: lastVer});
+		} else {
+			actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: this.encoder.decode(path + key)});					
+		}
+	}
+};
+
 
 exports.MFS = MFS;
 
