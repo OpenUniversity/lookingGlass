@@ -19,6 +19,7 @@
      - [.transaction(trans, callback(err, actions))](#mongofs-transactiontrans-callbackerr-actions)
        - [map](#mongofs-transactiontrans-callbackerr-actions-map)
        - [unmap](#mongofs-transactiontrans-callbackerr-actions-unmap)
+       - [remove](#mongofs-transactiontrans-callbackerr-actions-remove)
 <a name=""></a>
  
 <a name="util"></a>
@@ -492,6 +493,34 @@ util.seq([
 		assert(actions['unmap:/a/b/e'], 'unmap:/a/b/e');
 		_();
 	},
+], done)();
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-remove"></a>
+### remove
+should remove the given files.
+
+```js
+util.seq([
+	function(_) { mfs.transaction({path: '/a/b/', remove: ['c', 'd']}, _); },
+	function(_) { mfs.transaction({path: '/a/b/', get: ['c']}, function(err) {
+		try {
+			assert(err, 'Should not find c');
+			assert(err.fileNotFound, 'Should not find c');
+			_();
+		} catch(e) {
+			done(e);
+		}
+	}); },
+	function(_) { mfs.transaction({path: '/a/b/', get: ['d']}, function(err) {
+		try {
+			assert(err, 'Should not find d');
+			assert(err.fileNotFound, 'Should not find d');
+			_();
+		} catch(e) {
+			done(e);
+		}
+	}); },
 ], done)();
 ```
 

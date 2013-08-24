@@ -326,6 +326,21 @@ MFS.prototype.post_unmap = function(map, path, doc, actions) {
 	}
 };
 
+function removeToPut(remove) {
+	var put = {};
+	for(var i = 0; i < remove.length; i++) {
+		put[remove[i]] = {_dead:1};
+	}
+	return put;
+}
+
+MFS.prototype.pre_remove = function(remove, update, fields, ts) {
+	this.pre_put(removeToPut(remove), update, fields, ts);
+};
+MFS.prototype.post_remove = function(remove, path, doc, actions) {
+	this.post_put(removeToPut(remove), path, doc, actions);
+};
+
 
 exports.MFS = MFS;
 

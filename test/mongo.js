@@ -330,7 +330,7 @@ describe('MongoFS', function() {
 		], done)();
 	});
 	describe('.transaction(trans, callback(err, actions))', function() {
-		before(function(done) {
+		beforeEach(function(done) {
 			mfs.batchPut({'/a/b/c': {x:1}, '/a/b/d': {x:2}}, done);
 		});
 		it('should allow for multiple get and put operations to be performed atomically', function(done) {
@@ -395,6 +395,35 @@ describe('MongoFS', function() {
 					},
 				], done)();
 			});
+		});
+		describe('remove', function() {
+			before(function(done) {
+				mfs.transaction({path: '/a/b/', map: {m:7}, _ts: '33333'}, done);
+			});
+			it('should remove the given files', function(done) {
+				util.seq([
+					function(_) { mfs.transaction({path: '/a/b/', remove: ['c', 'd']}, _); },
+					function(_) { mfs.transaction({path: '/a/b/', get: ['c']}, function(err) {
+						try {
+							assert(err, 'Should not find c');
+							assert(err.fileNotFound, 'Should not find c');
+							_();
+						} catch(e) {
+							done(e);
+						}
+					}); },
+					function(_) { mfs.transaction({path: '/a/b/', get: ['d']}, function(err) {
+						try {
+							assert(err, 'Should not find d');
+							assert(err.fileNotFound, 'Should not find d');
+							_();
+						} catch(e) {
+							done(e);
+						}
+					}); },
+				], done)();
+			});
+			// and provide unmapping for them for each mapping that exists
 		});
 	});
 });

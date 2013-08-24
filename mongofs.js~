@@ -149,32 +149,6 @@ MFS.prototype.trampoline = function(action, callback) {
 
 MFS.prototype.removeMapping = function(path, ts, callback) {
 	this.transaction({path: path, unmap: [ts]}, callback);
-/*	path = this.encoder.encode(path);
-	var unset = {};
-	unset['m.' + ts] = 0;
-	var fields = {f:1};
-	fields['m.' + ts] = 1;
-	var self = this;
-	this.coll.findAndModify({_id: path}, {_id:1}, {$unset: unset}, {safe: true, fields: fields}, util.protect(callback, function(err, doc) {
-		var files = doc.f;
-		if(!files) {
-			return callback(undefined, []);
-		}
-		var mapping = doc.m[ts];
-		if(!mapping) {
-			throw new Error('No mapping ' + ts + ' at path ' + path);
-		}
-		var actions = [];
-		for(key in files) {
-			if(key.charAt(key.length-1) != '/') {
-				actions.push({type: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});
-			} else {
-				actions.push({type: 'tramp', internalType: 'unmap', mapping: mapping, path: self.encoder.decode(path + key)});					
-			}
-		}
-		callback(undefined, actions);
-	}));
-*/
 };
 function hasFields(obj) {
 	for(var k in obj) {
@@ -350,6 +324,21 @@ MFS.prototype.post_unmap = function(map, path, doc, actions) {
 			actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: this.encoder.decode(path + key)});					
 		}
 	}
+};
+
+function removeToPut(remove) {
+	var put = {};
+	for(var i = 0; i < remove.length; i++) {
+		put[remove[i]] = {_dead:1};
+	}
+	return put;
+}
+
+MFS.prototype.pre_remove = function(remove, update, fields, ts) {
+	this.pre_put(removeToPut(remove), update, fields, ts);
+};
+MFS.prototype.post_remove = function(remove, path, doc, actions) {
+	this.post_put(removeToPut(remove), path, doc, actions);
 };
 
 

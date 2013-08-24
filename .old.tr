@@ -32,6 +32,7 @@
     MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically
     MongoFS .transaction(trans, callback(err, actions)) map should define a single mapping for the directory: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) map should define a single mapping for the directory
     MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps
+    MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files
 
-  33 passing (252 ms)
+  34 passing (303 ms)
 
