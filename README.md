@@ -28,6 +28,7 @@
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getifexists)
          - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getdir)
          - [ifExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-ifexists)
+   - [Dispatcher(storage, tracker)](#dispatcherstorage-tracker)
 <a name=""></a>
  
 <a name="util"></a>
@@ -864,6 +865,51 @@ util.seq([
 	function(_) {
 		var dir = actionsToDir(this.actions);
 		assert(dir['/a/b/Y'], 'Y should be created because c and d do exist');
+		_();
+	},
+], done)();
+```
+
+<a name="dispatcherstorage-tracker"></a>
+# Dispatcher(storage, tracker)
+should handle transactions that do not require futher action by forwaring them to storage.
+
+```js
+util.seq([
+	function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _.to('put1')); },
+	function(_) { assert.deepEqual(this.put1, []); _();},
+	function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _.to('put2')); },
+	function(_) { assert.deepEqual(this.put2, []); _();},
+	function(_) { storage.transaction({path:'/a/b/', get:['c', 'd']}, _.to('actions')); },
+	function(_) { assert.deepEqual(this.actions, [
+		{type: 'content', path: '/a/b/c', content: {a:1, _ts: '01000'}},
+		{type: 'content', path: '/a/b/d', content: {a:2, _ts: '01000'}},
+	]); _();},
+	function(_) { storage.transaction({path:'/a/b/e/', get:['f', 'g']}, _.to('actions')); },
+	function(_) { assert.deepEqual(this.actions, [
+		{type: 'content', path: '/a/b/e/f', content: {a:3, _ts: '01001'}},
+		{type: 'content', path: '/a/b/e/g', content: {a:4, _ts: '01001'}},
+	]); _();},
+], done)();
+```
+
+should write actions that require further treatment to the tracker.
+
+```js
+util.seq([
+	function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _.to('mapActions')); },
+	function(_) { tracker.transaction({path: '/jobs/1/', getDir:{expandFiles:1}}, _.to('actions')); },
+	function(_) {
+		var mappings = {};
+		for(var i = 0; i < this.actions.length; i++) {
+			if(this.actions[i].type != 'content') continue;
+			var content = this.actions[i].content;
+			assert.equal(content.mapping.m, 1);
+			mappings[content.type + ':' + content.path] = content;
+		}
+		assert(mappings['tramp:/a/b/e/'], 'tramp:/a/b/e/');
+		assert(mappings['map:/a/b/c'], 'map:/a/b/c');
+		assert(mappings['map:/a/b/d'], 'map:/a/b/d');
 		_();
 	},
 ], done)();
