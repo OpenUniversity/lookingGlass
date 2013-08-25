@@ -28,7 +28,7 @@ describe('MongoFS', function() {
 		mongodb.MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
 			if(err) return done(err);
 			coll = db.collection('test');
-			mfs = new mongofs.MFS(coll);
+			mfs = new mongofs.MFS(coll, {maxVers: 2});
 			coll.remove({}, done);
 		});
 	});
@@ -45,7 +45,7 @@ describe('MongoFS', function() {
 				_id: '/hello/', 
 				f : {
 					a: [{foo: 'bar', _ts:1}],
-					b: [{value:'first', _ts:200}, {value:'last', _ts:100}, ]
+					b: [{value:'first', _ts:'0200'}, {value:'last', _ts:'0100'}, ]
 				}
 			}, done);
 		});
@@ -85,9 +85,9 @@ describe('MongoFS', function() {
 			}));
 		});
 		it('should reflect the provided timestamp if one is given', function(done) {
-			mfs.put('/hello/someOtherFile', {foo: 'bar', _ts: 100}, protect(done, function(err) {
+			mfs.put('/hello/someOtherFile', {foo: 'bar', _ts: '0100'}, protect(done, function(err) {
 				mfs.get('/hello/someOtherFile', protect(done, function(err, file) {
-					assert.equal(file._ts, 100);
+					assert.equal(file._ts, '0100');
 					done();
 				}));
 			}));
@@ -95,9 +95,9 @@ describe('MongoFS', function() {
 	});
 	it('should retrieve the value with the highest _ts value', function(done) {
 		util.seq([
-			function(_) {mfs.put('/some/path/to/doc', {foo: 'bar', _ts: 1000}, _); },
-			function(_) {mfs.put('/some/path/to/doc', {foo: 'baz', _ts: 3000}, _); },
-			function(_) {mfs.put('/some/path/to/doc', {foo: 'bat', _ts: 2000}, _); },
+			function(_) {mfs.put('/some/path/to/doc', {foo: 'bar', _ts: '01000'}, _); },
+			function(_) {mfs.put('/some/path/to/doc', {foo: 'baz', _ts: '03000'}, _); },
+			function(_) {mfs.put('/some/path/to/doc', {foo: 'bat', _ts: '02000'}, _); },
 			function(_) {
 				mfs.get('/some/path/to/doc', protect(done, function(err, file) {
 					assert.equal(file.foo, 'baz');
@@ -108,7 +108,7 @@ describe('MongoFS', function() {
 	});
 	describe('.batchPut(keyVals, callback(err))', function() {
 		it('should put files for all key/value pairs in the given object', function(done) {
-			var valuesToInsert = {'/a/b/c': {foo:'bar'}, '/g/h': {hello: 'world'}, '/tee/pee': {a: 1, b: 2, _ts: 800}};
+			var valuesToInsert = {'/a/b/c': {foo:'bar'}, '/g/h': {hello: 'world'}, '/tee/pee': {a: 1, b: 2, _ts: '0800'}};
 			mfs.batchPut(valuesToInsert, protect(done, function(err) {
 				mfs.get('/a/b/c', protect(done, function(err, file) {
 					assert.equal(file.foo, 'bar');
@@ -146,7 +146,7 @@ describe('MongoFS', function() {
 
 	describe('.remove(path, timestamp, callback(err))', function(){
 		beforeEach(function(done) {
-			mfs.put('/file/to/delete', {foo: 'bar', _ts: 1000}, done);
+			mfs.put('/file/to/delete', {foo: 'bar', _ts: '01000'}, done);
 		});
 		afterEach(function(done) {
 			coll.update({_id: '/file/to/'}, {$unset: {'f.delete':0}}, {}, done);
@@ -333,6 +333,46 @@ describe('MongoFS', function() {
 		beforeEach(function(done) {
 			mfs.batchPut({'/a/b/c': {x:1}, '/a/b/d': {x:2}}, done);
 		});
+		describe('get', function() {
+			before(function(done) {
+				util.seq([
+					function(_) { mfs.transaction({_ts: '01000', path:'/bank/account/', put: {me: {amount: 100}}}, _); },
+					function(_) { mfs.transaction({_ts: '02000', path:'/bank/account/', put: {me: {amount: 200}}}, _); },
+					function(_) { mfs.transaction({_ts: '03000', path:'/bank/account/', put: {me: {amount: 300}}}, _); },
+				], done)();
+			});
+			it('should retrieve the latest version prior to the transaction timestamp if one is stored', function(done) {
+				mfs.transaction({_ts: '02500', path:'/bank/account/', get: ['me']}, util.protect(done, function(err, actions) {
+						assert.equal(actions.length, 1);
+						assert.equal(actions[0].type, 'content');
+						assert.equal(actions[0].path, '/bank/account/me');
+						assert.equal(actions[0].content.amount, 200); // Before the 03000 ts
+						done();
+				}));
+			});
+			it('should retrieve the earliest stored version if latest prior to ts is not stored', function(done) {
+				mfs.transaction({_ts: '01500', path:'/bank/account/', get: ['me']}, util.protect(done, function(err, actions) {
+						assert.equal(actions.length, 1);
+						assert.equal(actions[0].type, 'content');
+						assert.equal(actions[0].path, '/bank/account/me');
+						assert.equal(actions[0].content.amount, 200); // We only save two versions
+						done();
+				}));
+			});
+			it('should not find the file if it was created past the transaction ts, as long as enough versions are stored', function(done) {
+				util.seq([
+					function(_) { mfs.transaction({_ts: '02000', path: '/some/thing/new', put:{foo: {bar: 'baz'}}}, _); },
+					function(_) { mfs.transaction({_ts: '01000', path: '/some/thing/new', get: ['foo'], _); },
+					function(_) {
+						done(new Error('File should not have been found'));
+					}
+				], function(err) {
+					assert(err.fileNotFound, 'File should not have been found');
+					done();
+				})();
+			});
+		});
+		describe('put', function() {});
 		it('should allow for multiple get and put operations to be performed atomically', function(done) {
 			mfs.transaction({
 				path: '/a/b/',

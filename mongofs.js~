@@ -208,7 +208,7 @@ MFS.prototype.transaction = function(trans, callback) {
 	}
 };
 
-MFS.prototype.trans_get = function(get, update, fields) {
+MFS.prototype.trans_get = function(get, update, fields, ts) {
 	for(var i = 0; i < get.length; i++) {
 		var field = this.encoder.encode(get[i]);
 		fields['f.' + field] = 1;
@@ -221,14 +221,29 @@ MFS.prototype.trans_get = function(get, update, fields) {
 			if(!(field in doc.f)) { self.throwFileNotFoundExeption(path + field); }
 			var vers = doc.f[field];
 			if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
-			var content = vers[vers.length - 1];
+			var content = getLatestVersionAsOf(vers, ts);
 			if(content._dead) { self.throwFileNotFoundExeption(path + field); }
 			actions.push({type: 'content', path: path + field, content: content});
 		}
 	};
 };
+
+function getLatestVersionAsOf(vers, ts) {
+	for(var i = vers.length - 1; i >= 0; i--) {
+		if(vers[i]._ts < ts) {
+			return vers[i];
+		}
+	}
+	return vers[0];
+}
 function removeSubFieldsOfExistingFields(fields) {
-	
+	var fieldNames = [];
+	for(var name in fields) {
+		fieldNames.push(name);
+	}
+	for(var i = 0; i < fieldNames.length; i++) {
+		removeFieldsStartingWith(fields, fieldNames[i] + '.');
+	}
 }
 function removeFieldsStartingWith(obj, prefix) {
 	for(var field in obj) {
@@ -246,7 +261,7 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		put[field]._ts = ts;
 		var content = put[field];
 		field = this.encoder.encode(field);
-		update.$push['f.' + field] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
+		update.$push['f.' + field] = {${_ts:0, _dead:1}, content], $slice: -this.maxVers, $sort: {_ts:1}};
 		fields['f.' + field] = 1;
 	}
 	fields.m = 1;

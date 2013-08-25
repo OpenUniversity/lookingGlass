@@ -30,6 +30,9 @@
     MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content: [2K[0G  ․ MongoFS .createMapping(path, mapping, callback(err, actions)) with .remove() should emit unmapping of the removed content
     MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect: [2K[0G  ․ MongoFS .removeMapping(path, tsid, callback(err, actions)) should remove the mapping with tsid from path, and produce actions to undo its effect
     MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) should allow for multiple get and put operations to be performed atomically
+    MongoFS .transaction(trans, callback(err, actions)) get should retrieve the latest version prior to the transaction timestamp if one is stored: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) get should retrieve the latest version prior to the transaction timestamp if one is stored
+    MongoFS .transaction(trans, callback(err, actions)) get should retrieve the earliest stored version if latest prior to ts is not stored: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) get should retrieve the earliest stored version if latest prior to ts is not stored
+    MongoFS .transaction(trans, callback(err, actions)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored
     MongoFS .transaction(trans, callback(err, actions)) map should define a single mapping for the directory: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) map should define a single mapping for the directory
     MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps
     MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files
@@ -39,5 +42,5 @@
     MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
     MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
 
-  39 passing (344 ms)
+  42 passing (388 ms)
 

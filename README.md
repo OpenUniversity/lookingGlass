@@ -17,6 +17,8 @@
        - [with .remove()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-remove)
      - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
      - [.transaction(trans, callback(err, actions))](#mongofs-transactiontrans-callbackerr-actions)
+       - [get](#mongofs-transactiontrans-callbackerr-actions-get)
+       - [put](#mongofs-transactiontrans-callbackerr-actions-put)
        - [map](#mongofs-transactiontrans-callbackerr-actions-map)
        - [unmap](#mongofs-transactiontrans-callbackerr-actions-unmap)
        - [remove](#mongofs-transactiontrans-callbackerr-actions-remove)
@@ -146,9 +148,9 @@ should retrieve the value with the highest _ts value.
 
 ```js
 util.seq([
-	function(_) {mfs.put('/some/path/to/doc', {foo: 'bar', _ts: 1000}, _); },
-	function(_) {mfs.put('/some/path/to/doc', {foo: 'baz', _ts: 3000}, _); },
-	function(_) {mfs.put('/some/path/to/doc', {foo: 'bat', _ts: 2000}, _); },
+	function(_) {mfs.put('/some/path/to/doc', {foo: 'bar', _ts: '01000'}, _); },
+	function(_) {mfs.put('/some/path/to/doc', {foo: 'baz', _ts: '03000'}, _); },
+	function(_) {mfs.put('/some/path/to/doc', {foo: 'bat', _ts: '02000'}, _); },
 	function(_) {
 		mfs.get('/some/path/to/doc', protect(done, function(err, file) {
 			assert.equal(file.foo, 'baz');
@@ -219,9 +221,9 @@ mfs.put('/hello/file', {key: 123}, protect(done, function(err) {
 should reflect the provided timestamp if one is given.
 
 ```js
-mfs.put('/hello/someOtherFile', {foo: 'bar', _ts: 100}, protect(done, function(err) {
+mfs.put('/hello/someOtherFile', {foo: 'bar', _ts: '0100'}, protect(done, function(err) {
 	mfs.get('/hello/someOtherFile', protect(done, function(err, file) {
-		assert.equal(file._ts, 100);
+		assert.equal(file._ts, '0100');
 		done();
 	}));
 }));
@@ -232,7 +234,7 @@ mfs.put('/hello/someOtherFile', {foo: 'bar', _ts: 100}, protect(done, function(e
 should put files for all key/value pairs in the given object.
 
 ```js
-var valuesToInsert = {'/a/b/c': {foo:'bar'}, '/g/h': {hello: 'world'}, '/tee/pee': {a: 1, b: 2, _ts: 800}};
+var valuesToInsert = {'/a/b/c': {foo:'bar'}, '/g/h': {hello: 'world'}, '/tee/pee': {a: 1, b: 2, _ts: '0800'}};
 mfs.batchPut(valuesToInsert, protect(done, function(err) {
 	mfs.get('/a/b/c', protect(done, function(err, file) {
 		assert.equal(file.foo, 'bar');
@@ -459,6 +461,47 @@ function actionsToContentMap(results) {
 	}
 	return contentMap;
 }
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-get"></a>
+### get
+should retrieve the latest version prior to the transaction timestamp if one is stored.
+
+```js
+mfs.transaction({_ts: '02500', path:'/bank/account/', get: ['me']}, util.protect(done, function(err, actions) {
+		assert.equal(actions.length, 1);
+		assert.equal(actions[0].type, 'content');
+		assert.equal(actions[0].path, '/bank/account/me');
+		assert.equal(actions[0].content.amount, 200); // Before the 03000 ts
+		done();
+}));
+```
+
+should retrieve the earliest stored version if latest prior to ts is not stored.
+
+```js
+mfs.transaction({_ts: '01500', path:'/bank/account/', get: ['me']}, util.protect(done, function(err, actions) {
+		assert.equal(actions.length, 1);
+		assert.equal(actions[0].type, 'content');
+		assert.equal(actions[0].path, '/bank/account/me');
+		assert.equal(actions[0].content.amount, 200); // We only save two versions
+		done();
+}));
+```
+
+should not find the file if it was created past the transaction ts, as long as enough versions are stored.
+
+```js
+util.seq([
+	function(_) { mfs.transaction({_ts: '02000', path: '/some/thing/new', put:{foo: {bar: 'baz'}}}, _); },
+	function(_) { mfs.transaction({_ts: '01000', path: '/some/thing/new', get: ['foo']}, _); },
+	function(_) {
+		done(new Error('File should not have been found'));
+	}
+], function(err) {
+	assert(err.fileNotFound, 'File should not have been found');
+	done();
+})();
 ```
 
 <a name="mongofs-transactiontrans-callbackerr-actions-map"></a>
