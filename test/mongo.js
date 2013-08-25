@@ -3,6 +3,7 @@ var mongofs = require("../mongofs.js");
 var mongodb = require("mongodb");
 var util = require("../util.js");
 var protect = util.protect;
+var describeStorageDriver = require('./storageDriver-test.js').describeStorageDriver;
 
 function trampoline(mfs, actions, callback) {
 	for(var i = 0; i < actions.length; i++) {
@@ -24,12 +25,14 @@ function trampoline(mfs, actions, callback) {
 describe('MongoFS', function() {
 	var mfs;
 	var coll;
+	var driverContainer = {};
 	before(function(done) {
 		mongodb.MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
 			if(err) return done(err);
 			coll = db.collection('test');
 			mfs = new mongofs.MFS(coll, {maxVers: 2});
 			coll.remove({}, done);
+			driverContainer.driver = mfs;
 		});
 	});
 	
@@ -438,7 +441,7 @@ describe('MongoFS', function() {
 		});
 		describe('remove', function() {
 			before(function(done) {
-				mfs.transaction({path: '/a/b/', map: {m:7}, _ts: '33333'}, done);
+				mfs.transaction({path: '/a/b/', map: {m:7}, _ts: '033333'}, done);
 			});
 			it('should remove the given files', function(done) {
 				util.seq([
@@ -533,5 +536,6 @@ describe('MongoFS', function() {
 			});
 		});
 	});
+	describeStorageDriver(driverContainer);
 });
 
