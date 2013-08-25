@@ -39,5 +39,5 @@
     MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
     MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
 
-  39 passing (329 ms)
+  39 passing (344 ms)
 

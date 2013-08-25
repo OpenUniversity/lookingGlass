@@ -28,7 +28,7 @@ describe('MongoFS', function() {
 		mongodb.MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
 			if(err) return done(err);
 			coll = db.collection('test');
-			mfs = new mongofs.MFS(coll);
+			mfs = new mongofs.MFS(coll, {maxVers: 2});
 			coll.remove({}, done);
 		});
 	});

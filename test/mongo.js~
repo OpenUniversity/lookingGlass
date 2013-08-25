@@ -486,9 +486,7 @@ describe('MongoFS', function() {
 							dir[actions[i].path] = actions[i].content;
 						}
 					}
-					assert(dir['/a/b/c'], '/a/b/c should exist');
 					assert.equal(dir['/a/b/c'].x, 1);
-					assert(dir['/a/b/d'], '/a/b/d should exist');
 					assert.equal(dir['/a/b/d'].x, 2);
 					done();
 				}));
