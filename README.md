@@ -273,7 +273,7 @@ mfs.getDir('/a/b/', true, protect(done, function(err, content) {
 should remove a file of the given path.
 
 ```js
-mfs.remove('/file/to/delete', 0, protect(done, function(err) {
+mfs.remove('/file/to/delete', undefined, protect(done, function(err) {
 	mfs.get('/file/to/delete', util.shouldFail(done, 'File should not exist', function(err) {
 		assert(err.fileNotFound, 'File should not exist');
 		done();
@@ -393,7 +393,7 @@ util.seq([
 should emit unmapping of the removed content.
 
 ```js
-mfs.remove('/a/b/c', 0, protect(done, function(err, actions){
+mfs.remove('/a/b/c', undefined, protect(done, function(err, actions){
 	assert(actions.length >= 1, 'there should be at least one unmap');
 	for(var i = 0; i < actions.length; i++) {
 		assert.equal(actions[i].type, 'unmap');
@@ -522,5 +522,24 @@ util.seq([
 		}
 	}); },
 ], done)();
+```
+
+should provide unmapping for them for each mapping that exists.
+
+```js
+mfs.transaction({path: '/a/b/', remove: ['c']}, util.protect(done, function(err, actions) {
+	assert(actions.length >= 1, 'there should be at least one result');
+	var found = false;
+	for(var i = 0; i < actions.length; i++) {
+		assert.equal(actions[i].type, 'unmap');
+		assert.equal(actions[i].path, '/a/b/c');
+		if(actions[i].mapping.m == 7) {
+			found = true;
+		}
+		assert.equal(actions[i].content.x, 1);
+	}
+	assert(found, 'Should find the mapping');
+	done();
+}));
 ```
 

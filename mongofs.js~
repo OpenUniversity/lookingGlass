@@ -130,8 +130,12 @@ MFS.prototype.getDir = function(path, expandFiles, callback) {
 	}));
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
-	timestamp = timestamp || util.timeUid();
-	this.put(path, {_ts: timestamp, _dead: 1}, callback);
+	var parsedPath = parsePath(path);
+	var trans = {path: parsedPath.dirPath, remove: [parsedPath.fileName]};
+	if(timestamp) {
+		trans._ts = timestamp;
+	}
+	this.transaction(trans, callback);
 };
 
 MFS.prototype.createMapping = function(path, mapping, callback) {
@@ -164,10 +168,11 @@ MFS.prototype.transaction = function(trans, callback) {
 	trans.path = this.encoder.encode(trans.path);
 	var update = {};
 	var fields = {};
+	var postMethods = [];
 	for(var key in trans) {
-		var methodName = 'pre_' + key;
+		var methodName = 'trans_' + key;
 		if(this[methodName]) {
-			this[methodName](trans[key], update, fields, trans._ts);
+			postMethods.push(this[methodName](trans[key], update, fields, trans._ts));
 		}
 	}
 	var self = this;
@@ -178,11 +183,8 @@ MFS.prototype.transaction = function(trans, callback) {
 			doc = {};
 		}
 		var actions = [];
-		for(var key in trans) {
-			var methodName = 'post_' + key;
-			if(self[methodName]) {
-				self[methodName](trans[key], trans.path, doc, actions);
-			}
+		for(var i = 0; i < postMethods.length; i++) {
+			postMethods[i](trans.path, doc, actions);
 		}
 		for(var i = 0; i < actions.length; i++) {	
 			if(actions[i].path) {
@@ -202,24 +204,24 @@ MFS.prototype.transaction = function(trans, callback) {
 	}
 };
 
-MFS.prototype.pre_get = function(get, update, fields) {
+MFS.prototype.trans_get = function(get, update, fields) {
 	for(var i = 0; i < get.length; i++) {
 		var field = this.encoder.encode(get[i]);
 		fields['f.' + field] = 1;
 	}
-};
-
-MFS.prototype.post_get = function(get, path, doc, actions) {
-	for(var i = 0; i < get.length; i++) {
-		var field = this.encoder.encode(get[i]);
-		if(!doc.f) { this.throwFileNotFoundExeption(path + field); }
-		if(!(field in doc.f)) { this.throwFileNotFoundExeption(path + field); }
-		var vers = doc.f[field];
-		if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
-		var content = vers[vers.length - 1];
-		if(content._dead) { this.throwFileNotFoundExeption(path + field); }
-		actions.push({type: 'content', path: path + field, content: content});
-	}
+	var self = this;
+	return function(path, doc, actions) {
+		for(var i = 0; i < get.length; i++) {
+			var field = self.encoder.encode(get[i]);
+			if(!doc.f) { self.throwFileNotFoundExeption(path + field); }
+			if(!(field in doc.f)) { self.throwFileNotFoundExeption(path + field); }
+			var vers = doc.f[field];
+			if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
+			var content = vers[vers.length - 1];
+			if(content._dead) { self.throwFileNotFoundExeption(path + field); }
+			actions.push({type: 'content', path: path + field, content: content});
+		}
+	};
 };
 
 function removeFieldsStartingWith(obj, prefix) {
@@ -230,7 +232,7 @@ function removeFieldsStartingWith(obj, prefix) {
 	}
 }
 
-MFS.prototype.pre_put = function(put, update, fields, ts) {
+MFS.prototype.trans_put = function(put, update, fields, ts) {
 	if(!update.$push) {
 		update.$push = {};
 	}
@@ -243,6 +245,31 @@ MFS.prototype.pre_put = function(put, update, fields, ts) {
 	}
 	removeFieldsStartingWith(fields, 'm.');
 	fields.m = 1;
+	var self = this;
+	return function(path, doc, actions) {
+		var mappings = doc.m;
+		if(doc.f) {
+			for(var field in put) {
+				field = self.encoder.encode(field);
+				var content = put[field];
+				var vers = doc.f[field];
+				if(vers) {
+					var latest = vers[vers.length - 1];
+					if(latest._ts < content._ts) {
+						arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
+						arrayAppend(actions, self.createMappingActions('unmap', path + field, latest, mappings));
+					}
+				} else {
+					arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
+				}
+			}
+		} else if(mappings) {
+			for(var field in put) {
+				var content = put[field];
+				arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
+			}
+		}
+	};
 };
 
 function arrayAppend(array, arrayToAppend) {
@@ -251,96 +278,69 @@ function arrayAppend(array, arrayToAppend) {
 	}
 }
 
-MFS.prototype.post_put = function(put, path, doc, actions) {
-	var mappings = doc.m;
-	if(doc.f) {
-		for(var field in put) {
-			field = this.encoder.encode(field);
-			var content = put[field];
-			var vers = doc.f[field];
-			if(vers) {
-				var latest = vers[vers.length - 1];
-				if(latest._ts < content._ts) {
-					arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings)
-						.concat(this.createMappingActions('unmap', path + field, latest, mappings)));
-				}
-			} else {
-				arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings));
-			}
-		}
-	} else if(mappings) {
-		for(var field in put) {
-			var content = put[field];
-			arrayAppend(actions, this.createMappingActions('map', path + field, content, mappings));
-		}
-	}
-};
-
 MFS.prototype.throwFileNotFoundExeption = function(path) {
 	var err = new Error('File not found: ' + path);
 	err.fileNotFound = 1;
 	throw err;
 }
 
-MFS.prototype.pre_map = function(map, update, fields, ts) {
+MFS.prototype.trans_map = function(map, update, fields, ts) {
 	if(!update.$set) {
 		update.$set = {};
 	}
 	update.$set['m.' + ts] = map;
 	fields.f = 1;
-};
-MFS.prototype.post_map = function(map, path, doc, actions) {
-	var files = doc.f;
-	for(var key in files) {
-		if(key.charAt(key.length-1) != '/') {
-			var vers = files[key];
-			if(vers.length == 0) continue;
-			var lastVer = vers[vers.length - 1];
-			if(lastVer._dead) continue;
-			actions.push({type: 'map', mapping: map, path: this.encoder.decode(path + key), value: lastVer});
-		} else {
-			actions.push({type: 'tramp', internalType: 'map', mapping: map, path: this.encoder.decode(path + key)});					
+	var self = this;
+	return function(path, doc, actions) {
+		var files = doc.f;
+		for(var key in files) {
+			if(key.charAt(key.length-1) != '/') {
+				var vers = files[key];
+				if(vers.length == 0) continue;
+				var lastVer = vers[vers.length - 1];
+				if(lastVer._dead) continue;
+				actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
+			} else {
+				actions.push({type: 'tramp', internalType: 'map', mapping: map, path: self.encoder.decode(path + key)});					
+			}
 		}
-	}
+	};
 };
 
-MFS.prototype.pre_unmap = function(map, update, fields, ts) {
+MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 	if(!update.$unset) {
 		update.$unset = {};
 	}
 	update.$unset['m.' + ts] = 0;
 	fields.f = 1;
-};
-MFS.prototype.post_unmap = function(map, path, doc, actions) {
-	var files = doc.f;
-	for(var key in files) {
-		if(key.charAt(key.length-1) != '/') {
-			var vers = files[key];
-			if(vers.length == 0) continue;
-			var lastVer = vers[vers.length - 1];
-			if(lastVer._dead) continue;
-			actions.push({type: 'unmap', mapping: map, path: this.encoder.decode(path + key), value: lastVer});
-		} else {
-			actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: this.encoder.decode(path + key)});					
+	var self = this;
+	return function(path, doc, actions) {
+		var files = doc.f;
+		for(var key in files) {
+			if(key.charAt(key.length-1) != '/') {
+				var vers = files[key];
+				if(vers.length == 0) continue;
+				var lastVer = vers[vers.length - 1];
+				if(lastVer._dead) continue;
+				actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
+			} else {
+				actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: self.encoder.decode(path + key)});					
+			}
 		}
-	}
+	};
 };
-
 function removeToPut(remove) {
 	var put = {};
 	for(var i = 0; i < remove.length; i++) {
 		put[remove[i]] = {_dead:1};
 	}
+console.log(put);
 	return put;
 }
 
-MFS.prototype.pre_remove = function(remove, update, fields, ts) {
-	this.pre_put(removeToPut(remove), update, fields, ts);
+MFS.prototype.trans_remove = function(remove, update, fields, ts) {
+	return this.trans_put(removeToPut(remove), update, fields, ts);
 };
-MFS.prototype.post_remove = function(remove, path, doc, actions) {
-	this.post_put(removeToPut(remove), path, doc, actions);
-};
-
 
 exports.MFS = MFS;
 
