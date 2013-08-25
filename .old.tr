@@ -34,6 +34,8 @@
     MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) unmap should undo the mappings with the given timestamps
     MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) remove should remove the given files
     MongoFS .transaction(trans, callback(err, actions)) remove should provide unmapping for them for each mapping that exists: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) remove should provide unmapping for them for each mapping that exists
+    MongoFS .transaction(trans, callback(err, actions)) getIfExists should emit content actions only for the files that exist in the list: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getIfExists should emit content actions only for the files that exist in the list
+    MongoFS .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory
 
-  35 passing (321 ms)
+  37 passing (368 ms)
 

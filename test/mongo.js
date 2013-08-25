@@ -440,6 +440,32 @@ describe('MongoFS', function() {
 				}));
 			});
 		});
+		describe('getIfExists', function() {
+			it('should emit content actions only for the files that exist in the list', function(done) {
+				mfs.transaction({path: '/a/b/', getIfExists: ['c', 'doesNotExist']}, util.protect(done, function(err, actions) {
+					assert.equal(actions.length, 1);
+					assert.equal(actions[0].type, 'content');
+					assert.equal(actions[0].path, '/a/b/c');
+					assert.equal(actions[0].content.x, 1);
+					done();
+				}));
+			});
+		});
+		describe('getDir', function() {
+			it('should emit dir actions for all files in the directory', function(done) {
+				mfs.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, actions) {
+					var dir = {};
+					for(var i = 0; i < actions.length; i++) {
+						if(actions[i].type == 'dir') {
+							dir[actions[i].path] = 1;
+						}
+					}
+					assert(dir['/a/b/c'], '/a/b/c should exist');
+					assert(dir['/a/b/d'], '/a/b/d should exist');
+					done();
+				}));
+			});
+		});
 	});
 });
 

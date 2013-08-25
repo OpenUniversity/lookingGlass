@@ -127,7 +127,7 @@ describe('MongoFS', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {a:1}, '/a/b/d': {a:2}, '/a/b/e': {a:3}, '/a/j/k': {a:4}}, done);
 		});
-		it('should retrieve the names of all files and sub-dirs in the directory', function(done) {
+		it.only('should retrieve the names of all files and sub-dirs in the directory', function(done) {
 			mfs.getDir('/a/', false, protect(done, function(err, content) {
 				assert(content['b/'], 'b/');
 				assert(content['j/'], 'j/');
@@ -151,7 +151,7 @@ describe('MongoFS', function() {
 		afterEach(function(done) {
 			coll.update({_id: '/file/to/'}, {$unset: {'f.delete':0}}, {}, done);
 		});
-		it.only('should remove a file of the given path', function(done) {
+		it('should remove a file of the given path', function(done) {
 			mfs.remove('/file/to/delete', undefined, protect(done, function(err) {
 				mfs.get('/file/to/delete', util.shouldFail(done, 'File should not exist', function(err) {
 					assert(err.fileNotFound, 'File should not exist');
@@ -436,6 +436,32 @@ describe('MongoFS', function() {
 						assert.equal(actions[i].content.x, 1);
 					}
 					assert(found, 'Should find the mapping');
+					done();
+				}));
+			});
+		});
+		describe('getIfExists', function() {
+			it('should emit content actions only for the files that exist in the list', function(done) {
+				mfs.transaction({path: '/a/b/', getIfExists: ['c', 'doesNotExist']}, util.protect(done, function(err, actions) {
+					assert.equal(actions.length, 1);
+					assert.equal(actions[0].type, 'content');
+					assert.equal(actions[0].path, '/a/b/c');
+					assert.equal(actions[0].content.x, 1);
+					done();
+				}));
+			});
+		});
+		describe('getDir', function() {
+			it('should emit dir actions for all files in the directory', function(done) {
+				mfs.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, actions) {
+					var dir = {};
+					for(var i = 0; i < actions.length; i++) {
+						if(actions[i].type == 'dir') {
+							dir[actions[i].path] = 1;
+						}
+					}
+					assert(dir['/a/b/c'], '/a/b/c should exist');
+					assert(dir['/a/b/d'], '/a/b/d should exist');
 					done();
 				}));
 			});

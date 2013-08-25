@@ -20,6 +20,8 @@
        - [map](#mongofs-transactiontrans-callbackerr-actions-map)
        - [unmap](#mongofs-transactiontrans-callbackerr-actions-unmap)
        - [remove](#mongofs-transactiontrans-callbackerr-actions-remove)
+       - [getIfExists](#mongofs-transactiontrans-callbackerr-actions-getifexists)
+       - [getDir](#mongofs-transactiontrans-callbackerr-actions-getdir)
 <a name=""></a>
  
 <a name="util"></a>
@@ -539,6 +541,38 @@ mfs.transaction({path: '/a/b/', remove: ['c']}, util.protect(done, function(err,
 		assert.equal(actions[i].content.x, 1);
 	}
 	assert(found, 'Should find the mapping');
+	done();
+}));
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-getifexists"></a>
+### getIfExists
+should emit content actions only for the files that exist in the list.
+
+```js
+mfs.transaction({path: '/a/b/', getIfExists: ['c', 'doesNotExist']}, util.protect(done, function(err, actions) {
+	assert.equal(actions.length, 1);
+	assert.equal(actions[0].type, 'content');
+	assert.equal(actions[0].path, '/a/b/c');
+	assert.equal(actions[0].content.x, 1);
+	done();
+}));
+```
+
+<a name="mongofs-transactiontrans-callbackerr-actions-getdir"></a>
+### getDir
+should emit dir actions for all files in the directory.
+
+```js
+mfs.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, actions) {
+	var dir = {};
+	for(var i = 0; i < actions.length; i++) {
+		if(actions[i].type == 'dir') {
+			dir[actions[i].path] = 1;
+		}
+	}
+	assert(dir['/a/b/c'], '/a/b/c should exist');
+	assert(dir['/a/b/d'], '/a/b/d should exist');
 	done();
 }));
 ```

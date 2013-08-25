@@ -113,20 +113,23 @@ MFS.prototype.batchPut = function(keyVals, callback) {
 };
 
 MFS.prototype.getDir = function(path, expandFiles, callback) {
-	path = this.encoder.encode(path);
-	this.coll.find({_id: path}).toArray(util.protect(callback, function(err, docs) {
-		if(docs.length < 1) {
-			callback(new Error('Path not found: ' + path));
-			return;
-		}
-		var doc = docs[0].f;
-		if(expandFiles) {
-			for(var name in doc) {
-				var vers = doc[name];
-				doc[name] = vers[vers.length - 1];
+	this.transaction({path: path, getDir: {expandFiles: expandFiles}}, util.protect(callback, function(err, actions) {
+		var dir = {};
+		for(var i = 0; i < actions.length; i++) {
+			if(actions[i].type == 'dir') {
+				var fileName = actions[i].path.substr(path.length);
+				dir[fileName] = 1;
 			}
 		}
-		callback(undefined, doc);
+		if(expandFiles) {
+			for(var i = 0; i < actions.length; i++) {
+				if(actions[i].type == 'content') {
+					var fileName = actions[i].path.substr(path.length);
+					dir[fileName] = actions[i].content;
+				}
+			}
+		}
+		callback(undefined, dir);
 	}));
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
@@ -339,6 +342,41 @@ function removeToPut(remove) {
 
 MFS.prototype.trans_remove = function(remove, update, fields, ts) {
 	return this.trans_put(removeToPut(remove), update, fields, ts);
+};
+
+MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
+	this.trans_get(get, update, fields, ts);
+	var self = this;
+	return function(path, doc, actions) {
+		for(var i = 0; i < get.length; i++) {
+			var field = self.encoder.encode(get[i]);
+			if(!doc.f) continue;
+			if(!(field in doc.f)) continue;
+			var vers = doc.f[field];
+			if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
+			var content = vers[vers.length - 1];
+			if(content._dead) continue;
+			actions.push({type: 'content', path: path + field, content: content});
+		}
+	};
+};
+
+MFS.prototype.trans_getDir = function(options, update, fields, ts) {
+	fields.f = 1;
+	var self = this;
+	return function(path, doc, actions) {
+		var fields = doc.f;
+		if(!fields) return;
+		for(var key in fields) {
+			actions.push({type: 'dir', path: path + key});
+			if(options.expandFiles) {
+				var vers = fields[key];
+				if(vers.length == 0) throw new Error('No versions for ' + path);
+				var content = vers[vers.length - 1];
+				actions.push({type: 'content', path: path + key, content: content});
+			}
+		}
+	}
 };
 
 exports.MFS = MFS;
