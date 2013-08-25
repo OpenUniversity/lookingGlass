@@ -28,7 +28,9 @@
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getifexists)
          - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getdir)
          - [ifExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-ifexists)
-   - [Dispatcher(storage, tracker)](#dispatcherstorage-tracker)
+   - [Dispatcher](#dispatcher)
+     - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
+     - [.tick(callback(err))](#dispatcher-tickcallbackerr)
 <a name=""></a>
  
 <a name="util"></a>
@@ -870,8 +872,10 @@ util.seq([
 ], done)();
 ```
 
-<a name="dispatcherstorage-tracker"></a>
-# Dispatcher(storage, tracker)
+<a name="dispatcher"></a>
+# Dispatcher
+<a name="dispatcher-transactiontrans-callbackerr-actions"></a>
+## .transaction(trans, callback(err, actions))
 should handle transactions that do not require futher action by forwaring them to storage.
 
 ```js
@@ -897,9 +901,12 @@ should write actions that require further treatment to the tracker.
 
 ```js
 util.seq([
+	function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
+	function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
 	function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _.to('mapActions')); },
 	function(_) { tracker.transaction({path: '/jobs/1/', getDir:{expandFiles:1}}, _.to('actions')); },
 	function(_) {
+		assert.deepEqual(this.mapActions, []);
 		var mappings = {};
 		for(var i = 0; i < this.actions.length; i++) {
 			if(this.actions[i].type != 'content') continue;
@@ -910,6 +917,29 @@ util.seq([
 		assert(mappings['tramp:/a/b/e/'], 'tramp:/a/b/e/');
 		assert(mappings['map:/a/b/c'], 'map:/a/b/c');
 		assert(mappings['map:/a/b/d'], 'map:/a/b/d');
+		_();
+	},
+], done)();
+```
+
+<a name="dispatcher-tickcallbackerr"></a>
+## .tick(callback(err))
+should select a pending task from the tracker and mark it in progress.
+
+```js
+util.seq([
+	function(_) { disp.tick(_); },
+	function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
+	function(_) {
+		var inProgress = 0;
+		for(var i = 0; i < this.dir.length; i++) {
+			var entry = this.dir[i];
+			assert.equal(entry.type, 'dir');
+			if(entry.path.substr(0, 9) == '/jobs/1/^') {
+				inProgress++;
+			}
+		}
+		assert.equal(inProgress, 1);
 		_();
 	},
 ], done)();

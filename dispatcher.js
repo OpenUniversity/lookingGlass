@@ -1,4 +1,5 @@
 var util = require('./util.js');
+var assert = require('assert');
 
 var immediateTypes = {content:1, dir:1};
 
@@ -34,5 +35,37 @@ exports.Dispatcher = function(storage, tracker) {
 		], callback)();
 		storage.transaction(trans, util.protect(callback, function(err, actions) {
 		}));
+	};
+
+	function selectJob(dir) {
+		for(var i = 0; i < dir.length; i++) {
+			var name = dir[i].path;
+			var nameSplit = name.split('/');
+			name = nameSplit[nameSplit.length - 1];
+			if(name.substr(0, 1) != '^') {
+				return name;
+			}
+		}
+	}
+
+	this.tick = function(callback) {
+		util.seq([
+			function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
+			function(_) {
+				this.job = selectJob(this.dir);
+				//if(!job) return callback(undefined); 
+				_();
+			},
+			function(_) { tracker.transaction({path: '/jobs/1/', getIfExists: [this.job]}, _.to('jobContent')); },
+			function(_) {
+				if(this.jobContent.length == 0) return callback(undefined);
+				assert.equal(this.jobContent.length, 1);
+				assert.equal(this.jobContent[0].type, 'content');
+				this.markJobInProgress = {};
+				this.markJobInProgress['^' + this.job] = this.jobContent[0].content;
+				_();
+			},
+			function(_) { tracker.transaction({path: '/jobs/1/', ifExist: [this.job], remove: [this.job], put: this.markJobInProgress}, _); },
+		], callback)();
 	};
 };

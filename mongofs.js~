@@ -203,7 +203,7 @@ MFS.prototype.transaction = function(trans, callback) {
 		}
 	});
 	if(hasFields(update)) {
-		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: true, fields: fields}, post);
+		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.ifExists?false:true), fields: fields}, post);
 	} else {
 		this.coll.findOne(query, fields, post);
 	}

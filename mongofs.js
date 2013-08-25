@@ -271,8 +271,8 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		var mappings = doc.m;
 		if(doc.f) {
 			for(var field in put) {
-				field = self.encoder.encode(field);
 				var content = put[field];
+				field = self.encoder.encode(field);
 				var vers = doc.f[field];
 				if(vers) {
 					var latest = vers[vers.length - 1];
