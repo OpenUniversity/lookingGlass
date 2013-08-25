@@ -127,7 +127,7 @@ describe('MongoFS', function() {
 		before(function(done) {
 			mfs.batchPut({'/a/b/c': {a:1}, '/a/b/d': {a:2}, '/a/b/e': {a:3}, '/a/j/k': {a:4}}, done);
 		});
-		it.only('should retrieve the names of all files and sub-dirs in the directory', function(done) {
+		it('should retrieve the names of all files and sub-dirs in the directory', function(done) {
 			mfs.getDir('/a/', false, protect(done, function(err, content) {
 				assert(content['b/'], 'b/');
 				assert(content['j/'], 'j/');
@@ -462,6 +462,34 @@ describe('MongoFS', function() {
 					}
 					assert(dir['/a/b/c'], '/a/b/c should exist');
 					assert(dir['/a/b/d'], '/a/b/d should exist');
+					done();
+				}));
+			});
+			it('should behave properly when used in conjunction with get', function(done) {
+				mfs.transaction({path: '/a/b/', getDir: {}, get: ['d']}, util.protect(done, function(err, actions) {
+					var dir = {};
+					for(var i = 0; i < actions.length; i++) {
+						if(actions[i].type == 'dir') {
+							dir[actions[i].path] = 1;
+						}
+					}
+					assert(dir['/a/b/c'], '/a/b/c should exist');
+					assert(dir['/a/b/d'], '/a/b/d should exist');
+					done();
+				}));
+			});
+			it('should emit content entries with file contents when using the expandFiles option', function(done) {
+				mfs.transaction({path: '/a/b/', getDir: {expandFiles:1}}, util.protect(done, function(err, actions) {
+					var dir = {};
+					for(var i = 0; i < actions.length; i++) {
+						if(actions[i].type == 'content') {
+							dir[actions[i].path] = actions[i].content;
+						}
+					}
+					assert(dir['/a/b/c'], '/a/b/c should exist');
+					assert.equal(dir['/a/b/c'].x, 1);
+					assert(dir['/a/b/d'], '/a/b/d should exist');
+					assert.equal(dir['/a/b/d'].x, 2);
 					done();
 				}));
 			});

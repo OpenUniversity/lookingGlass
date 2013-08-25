@@ -36,6 +36,8 @@
     MongoFS .transaction(trans, callback(err, actions)) remove should provide unmapping for them for each mapping that exists: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) remove should provide unmapping for them for each mapping that exists
     MongoFS .transaction(trans, callback(err, actions)) getIfExists should emit content actions only for the files that exist in the list: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getIfExists should emit content actions only for the files that exist in the list
     MongoFS .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory
+    MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
+    MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
 
-  37 passing (368 ms)
+  39 passing (329 ms)
 

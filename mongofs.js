@@ -178,6 +178,7 @@ MFS.prototype.transaction = function(trans, callback) {
 			postMethods.push(this[methodName](trans[key], update, fields, trans._ts));
 		}
 	}
+	removeSubFieldsOfExistingFields(fields);
 	var self = this;
 	var post = util.protect(callback, function(err, doc) {
 		var dirDoesNotExist = false;
@@ -226,7 +227,15 @@ MFS.prototype.trans_get = function(get, update, fields) {
 		}
 	};
 };
-
+function removeSubFieldsOfExistingFields(fields) {
+	var fieldNames = [];
+	for(var name in fields) {
+		fieldNames.push(name);
+	}
+	for(var i = 0; i < fieldNames.length; i++) {
+		removeFieldsStartingWith(fields, fieldNames[i] + '.');
+	}
+}
 function removeFieldsStartingWith(obj, prefix) {
 	for(var field in obj) {
 		if(field.substr(0, prefix.length) == prefix) {
@@ -246,7 +255,6 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		update.$push['f.' + field] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
 		fields['f.' + field] = 1;
 	}
-	removeFieldsStartingWith(fields, 'm.');
 	fields.m = 1;
 	var self = this;
 	return function(path, doc, actions) {
@@ -332,16 +340,13 @@ MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 		}
 	};
 };
-function removeToPut(remove) {
+
+MFS.prototype.trans_remove = function(remove, update, fields, ts) {
 	var put = {};
 	for(var i = 0; i < remove.length; i++) {
 		put[remove[i]] = {_dead:1};
 	}
-	return put;
-}
-
-MFS.prototype.trans_remove = function(remove, update, fields, ts) {
-	return this.trans_put(removeToPut(remove), update, fields, ts);
+	return this.trans_put(put, update, fields, ts);
 };
 
 MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {

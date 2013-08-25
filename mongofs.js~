@@ -113,21 +113,6 @@ MFS.prototype.batchPut = function(keyVals, callback) {
 };
 
 MFS.prototype.getDir = function(path, expandFiles, callback) {
-/*	path = this.encoder.encode(path);
-	this.coll.find({_id: path}).toArray(util.protect(callback, function(err, docs) {
-		if(docs.length < 1) {
-			callback(new Error('Path not found: ' + path));
-			return;
-		}
-		var doc = docs[0].f;
-		if(expandFiles) {
-			for(var name in doc) {
-				var vers = doc[name];
-				doc[name] = vers[vers.length - 1];
-			}
-		}
-		callback(undefined, doc);
-	}));*/
 	this.transaction({path: path, getDir: {expandFiles: expandFiles}}, util.protect(callback, function(err, actions) {
 		var dir = {};
 		for(var i = 0; i < actions.length; i++) {
@@ -193,6 +178,7 @@ MFS.prototype.transaction = function(trans, callback) {
 			postMethods.push(this[methodName](trans[key], update, fields, trans._ts));
 		}
 	}
+	removeSubFieldsOfExistingFields(fields);
 	var self = this;
 	var post = util.protect(callback, function(err, doc) {
 		var dirDoesNotExist = false;
@@ -241,7 +227,9 @@ MFS.prototype.trans_get = function(get, update, fields) {
 		}
 	};
 };
-
+function removeSubFieldsOfExistingFields(fields) {
+	
+}
 function removeFieldsStartingWith(obj, prefix) {
 	for(var field in obj) {
 		if(field.substr(0, prefix.length) == prefix) {
@@ -261,7 +249,6 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		update.$push['f.' + field] = {$each: [content], $slice: -this.maxVers, $sort: {_ts:1}};
 		fields['f.' + field] = 1;
 	}
-	removeFieldsStartingWith(fields, 'm.');
 	fields.m = 1;
 	var self = this;
 	return function(path, doc, actions) {
@@ -347,16 +334,13 @@ MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 		}
 	};
 };
-function removeToPut(remove) {
+
+MFS.prototype.trans_remove = function(remove, update, fields, ts) {
 	var put = {};
 	for(var i = 0; i < remove.length; i++) {
 		put[remove[i]] = {_dead:1};
 	}
-	return put;
-}
-
-MFS.prototype.trans_remove = function(remove, update, fields, ts) {
-	return this.trans_put(removeToPut(remove), update, fields, ts);
+	return this.trans_put(put, update, fields, ts);
 };
 
 MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {

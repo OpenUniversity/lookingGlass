@@ -577,3 +577,35 @@ mfs.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, ac
 }));
 ```
 
+should behave properly when used in conjunction with get.
+
+```js
+mfs.transaction({path: '/a/b/', getDir: {}, get: ['d']}, util.protect(done, function(err, actions) {
+	var dir = {};
+	for(var i = 0; i < actions.length; i++) {
+		if(actions[i].type == 'dir') {
+			dir[actions[i].path] = 1;
+		}
+	}
+	assert(dir['/a/b/c'], '/a/b/c should exist');
+	assert(dir['/a/b/d'], '/a/b/d should exist');
+	done();
+}));
+```
+
+should emit content entries with file contents when using the expandFiles option.
+
+```js
+mfs.transaction({path: '/a/b/', getDir: {expandFiles:1}}, util.protect(done, function(err, actions) {
+	var dir = {};
+	for(var i = 0; i < actions.length; i++) {
+		if(actions[i].type == 'content') {
+			dir[actions[i].path] = actions[i].content;
+		}
+	}
+	assert.equal(dir['/a/b/c'].x, 1);
+	assert.equal(dir['/a/b/d'].x, 2);
+	done();
+}));
+```
+
