@@ -171,11 +171,12 @@ MFS.prototype.transaction = function(trans, callback) {
 	trans.path = this.encoder.encode(trans.path);
 	var update = {};
 	var fields = {};
+	var query = {_id: trans.path};
 	var postMethods = [];
 	for(var key in trans) {
 		var methodName = 'trans_' + key;
 		if(this[methodName]) {
-			postMethods.push(this[methodName](trans[key], update, fields, trans._ts));
+			postMethods.push(this[methodName](trans[key], update, fields, trans._ts, query));
 		}
 	}
 	removeSubFieldsOfExistingFields(fields);
@@ -202,9 +203,9 @@ MFS.prototype.transaction = function(trans, callback) {
 		}
 	});
 	if(hasFields(update)) {
-		this.coll.findAndModify({_id: trans.path}, {_id:1}, update, {safe: true, upsert: true, fields: fields}, post);
+		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: true, fields: fields}, post);
 	} else {
-		this.coll.findOne({_id: trans.path}, fields, post);
+		this.coll.findOne(query, fields, post);
 	}
 };
 
@@ -222,7 +223,6 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
 			var vers = doc.f[field];
 			if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
 			var content = getLatestVersionAsOf(vers, ts);
-//			var content = vers[vers.length-1];
 			if(content._dead) { self.throwFileNotFoundExeption(path + field); }
 			actions.push({type: 'content', path: path + field, content: content});
 		}
@@ -392,6 +392,14 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 			}
 		}
 	}
+};
+
+MFS.prototype.trans_ifExists = function(ifExists, update, fields, ts, query) {
+	for(var i = 0; i < ifExists.length; i++) {
+		var key = this.encoder.encode(ifExists[i]);
+		query['f.' + key] = {$exists:true};
+	}
+	return function(path, doc, actions) {}
 };
 
 exports.MFS = MFS;

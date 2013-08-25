@@ -27,6 +27,7 @@
          - [remove](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-remove)
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getifexists)
          - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getdir)
+         - [ifExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-ifexists)
 <a name=""></a>
  
 <a name="util"></a>
@@ -199,7 +200,7 @@ mfs.get('/hello/b', protect(done, function(err, result) {
 should write a file so that get() retrieves it.
 
 ```js
-mfs.put('/hello/world', {hello: 'world', _ts: '01000'}, protect(done, function(err) {
+mfs.put('/hello/world', {hello: 'world'}, protect(done, function(err) {
 	mfs.get('/hello/world', protect(done, function(err, file) {
 		assert.equal(file.hello, 'world', done);
 		done();
@@ -806,16 +807,20 @@ should behave properly when used in conjunction with get.
 
 ```js
 driver.transaction({path: '/a/b/', getDir: {}, get: ['d']}, util.protect(done, function(err, actions) {
+	var dir = actionsToDir(actions);
+	assert(dir['/a/b/c'], '/a/b/c should exist');
+	assert(dir['/a/b/d'], '/a/b/d should exist');
+	done();
+}));
+function actionsToDir(actions) {
 	var dir = {};
 	for(var i = 0; i < actions.length; i++) {
 		if(actions[i].type == 'dir') {
 			dir[actions[i].path] = 1;
 		}
 	}
-	assert(dir['/a/b/c'], '/a/b/c should exist');
-	assert(dir['/a/b/d'], '/a/b/d should exist');
-	done();
-}));
+	return dir;
+}
 ```
 
 should emit content entries with file contents when using the expandFiles option.
@@ -832,5 +837,35 @@ driver.transaction({path: '/a/b/', getDir: {expandFiles:1}}, util.protect(done, 
 	assert.equal(dir['/a/b/d'].x, 2);
 	done();
 }));
+```
+
+<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-actions-ifexists"></a>
+#### ifExists
+should cause the transaction to be canceled if one of the given files does not exist.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd', 'X'], put: {Y:{foo: 'bar'}}}, _); },
+	function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
+	function(_) {
+		var dir = actionsToDir(this.actions);
+		assert(!dir['/a/b/Y'], 'Y should not be created because X does not exist');
+		_();
+	},
+], done)();
+```
+
+should allow the transaction to happen if the files do exist.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd'], put: {Y:{foo: 'bar'}}}, _); },
+	function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
+	function(_) {
+		var dir = actionsToDir(this.actions);
+		assert(dir['/a/b/Y'], 'Y should be created because c and d do exist');
+		_();
+	},
+], done)();
 ```
 

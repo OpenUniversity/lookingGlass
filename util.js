@@ -51,12 +51,14 @@ exports.seq = function(funcs, done) {
 }
 
 var MAX_UID = 0x100000000; // 36 bits
+var seed = 0x1000;
 
 exports.timeUid = function() {
 	var time = (new Date()).getTime().toString(16);
 	var uid = Math.floor((1 + Math.random()) * MAX_UID).toString(16);
 	uid = uid.substr(1); // The first character is always '1'
-	return time + uid; // string concatenation
+	seed++;
+	return time + seed + uid; // string concatenation
 }
 
 

@@ -53,6 +53,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) ifExists should cause the transaction to be canceled if one of the given files does not exist: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) ifExists should cause the transaction to be canceled if one of the given files does not exist
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) ifExists should allow the transaction to happen if the files do exist: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) ifExists should allow the transaction to happen if the files do exist
 
-  54 passing (473 ms)
+  56 passing (419 ms)
 

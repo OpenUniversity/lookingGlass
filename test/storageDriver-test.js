@@ -404,6 +404,15 @@ function describeStorageDriver(driverContainer) {
 					}));
 				});
 			});
+			function actionsToDir(actions) {
+				var dir = {};
+				for(var i = 0; i < actions.length; i++) {
+					if(actions[i].type == 'dir') {
+						dir[actions[i].path] = 1;
+					}
+				}
+				return dir;
+			}
 			describe('getDir', function() {
 				it('should emit dir actions for all files in the directory', function(done) {
 					driver.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, actions) {
@@ -420,16 +429,20 @@ function describeStorageDriver(driverContainer) {
 				});
 				it('should behave properly when used in conjunction with get', function(done) {
 					driver.transaction({path: '/a/b/', getDir: {}, get: ['d']}, util.protect(done, function(err, actions) {
+						var dir = actionsToDir(actions);
+						assert(dir['/a/b/c'], '/a/b/c should exist');
+						assert(dir['/a/b/d'], '/a/b/d should exist');
+						done();
+					}));
+					function actionsToDir(actions) {
 						var dir = {};
 						for(var i = 0; i < actions.length; i++) {
 							if(actions[i].type == 'dir') {
 								dir[actions[i].path] = 1;
 							}
 						}
-						assert(dir['/a/b/c'], '/a/b/c should exist');
-						assert(dir['/a/b/d'], '/a/b/d should exist');
-						done();
-					}));
+						return dir;
+					}
 				});
 				it('should emit content entries with file contents when using the expandFiles option', function(done) {
 					driver.transaction({path: '/a/b/', getDir: {expandFiles:1}}, util.protect(done, function(err, actions) {
@@ -445,8 +458,33 @@ function describeStorageDriver(driverContainer) {
 					}));
 				});
 			});
+			describe('ifExists', function() {
+				it('should cause the transaction to be canceled if one of the given files does not exist', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd', 'X'], put: {Y:{foo: 'bar'}}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
+						function(_) {
+							var dir = actionsToDir(this.actions);
+							assert(!dir['/a/b/Y'], 'Y should not be created because X does not exist');
+							_();
+						},
+					], done)();
+				});
+				it('should allow the transaction to happen if the files do exist', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd'], put: {Y:{foo: 'bar'}}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
+						function(_) {
+							var dir = actionsToDir(this.actions);
+							assert(dir['/a/b/Y'], 'Y should be created because c and d do exist');
+							_();
+						},
+					], done)();
+				});
+			});
 		});
 	});
 }
 
 exports.describeStorageDriver = describeStorageDriver;
+

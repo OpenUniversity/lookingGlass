@@ -171,11 +171,12 @@ MFS.prototype.transaction = function(trans, callback) {
 	trans.path = this.encoder.encode(trans.path);
 	var update = {};
 	var fields = {};
+	var query = {_id: trans.path};
 	var postMethods = [];
 	for(var key in trans) {
 		var methodName = 'trans_' + key;
 		if(this[methodName]) {
-			postMethods.push(this[methodName](trans[key], update, fields, trans._ts));
+			postMethods.push(this[methodName](trans[key], update, fields, trans._ts, query));
 		}
 	}
 	removeSubFieldsOfExistingFields(fields);
@@ -202,9 +203,9 @@ MFS.prototype.transaction = function(trans, callback) {
 		}
 	});
 	if(hasFields(update)) {
-		this.coll.findAndModify({_id: trans.path}, {_id:1}, update, {safe: true, upsert: true, fields: fields}, post);
+		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.ifExists?false:true), fields: fields}, post);
 	} else {
-		this.coll.findOne({_id: trans.path}, fields, post);
+		this.coll.findOne(query, fields, post);
 	}
 };
 
@@ -391,6 +392,14 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 			}
 		}
 	}
+};
+
+MFS.prototype.trans_ifExists = function(ifExists, update, fields, ts, query) {
+	for(var i = 0; i < ifExists.length; i++) {
+		var key = this.encoder.encode(ifExists[i]);
+		query['f.' + key] = {$exists:true};
+	}
+	return function(path, doc, actions) {}
 };
 
 exports.MFS = MFS;
