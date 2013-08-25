@@ -261,7 +261,7 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		put[field]._ts = ts;
 		var content = put[field];
 		field = this.encoder.encode(field);
-		update.$push['f.' + field] = {$each: [{_ts:0, _dead:1}, content], $slice: -this.maxVers, $sort: {_ts:1}};
+		update.$push['f.' + field] = {$each: [/*{_ts:0, _dead:1},*/ content], $slice: -this.maxVers, $sort: {_ts:1}};
 		fields['f.' + field] = 1;
 	}
 	fields.m = 1;
@@ -276,7 +276,6 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 				if(vers) {
 					var latest = vers[vers.length - 1];
 					if(latest._ts < content._ts) {
-console.log(1);
 						arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
 						arrayAppend(actions, self.createMappingActions('unmap', path + field, latest, mappings));
 					}

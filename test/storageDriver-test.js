@@ -255,7 +255,7 @@ function describeStorageDriver(driverContainer) {
 						},
 					], done)();
 				});
-				describe('with .put()', function() {
+				describe('with put', function() {
 					var mappingTS = util.timeUid();
 					before(function(done) {
 						driver.transaction({path: '/a/b/', map: {map: 333, _ts: mappingTS}}, util.protect(done, function(err, actions) {
@@ -297,7 +297,7 @@ function describeStorageDriver(driverContainer) {
 						], done)();
 					});
 				});
-				describe('with .remove()', function() {
+				describe('with remove', function() {
 					var mappingTS = util.timeUid();
 					before(function(done) {
 						driver.transaction({path: '/a/b/', map: {map: 333, _ts: mappingTS}}, util.protect(done, function(err, actions) {
