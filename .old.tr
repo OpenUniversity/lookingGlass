@@ -36,7 +36,7 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should retrieve the latest version prior to the transaction timestamp if one is stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should retrieve the latest version prior to the transaction timestamp if one is stored
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should retrieve the earliest stored version if latest prior to ts is not stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should retrieve the earliest stored version if latest prior to ts is not stored
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored
-    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should write a file so that "get" retrieves it
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should write a file so that "get" retrieves it: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should write a file so that "get" retrieves it
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should assign a timestamp to a file if one is not provided: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should assign a timestamp to a file if one is not provided
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should reflect the provided timestamp if one is given: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) put should reflect the provided timestamp if one is given
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions including the mapping for all files in the directory: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions including the mapping for all files in the directory
@@ -54,5 +54,5 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
 
-  53 passing (466 ms)
+  54 passing (473 ms)
 

@@ -69,7 +69,7 @@ describe('MongoFS', function() {
 
 	describe('.put(path, file, callback(err))', function() {
 		it('should write a file so that get() retrieves it', function(done) {
-			mfs.put('/hello/world', {hello: 'world'}, protect(done, function(err) {
+			mfs.put('/hello/world', {hello: 'world', _ts: '01000'}, protect(done, function(err) {
 				mfs.get('/hello/world', protect(done, function(err, file) {
 					assert.equal(file.hello, 'world', done);
 					done();
@@ -332,7 +332,6 @@ describe('MongoFS', function() {
 			function(_) { assert.equal(this.content.foo, 'bar'); _(); },
 		], done)();
 	});
-
 	describeStorageDriver(driverContainer);
 });
 

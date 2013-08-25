@@ -222,6 +222,7 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
 			var vers = doc.f[field];
 			if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
 			var content = getLatestVersionAsOf(vers, ts);
+//			var content = vers[vers.length-1];
 			if(content._dead) { self.throwFileNotFoundExeption(path + field); }
 			actions.push({type: 'content', path: path + field, content: content});
 		}
@@ -261,7 +262,7 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		put[field]._ts = ts;
 		var content = put[field];
 		field = this.encoder.encode(field);
-		update.$push['f.' + field] = {$each: [/*{_ts:0, _dead:1},*/ content], $slice: -this.maxVers, $sort: {_ts:1}};
+		update.$push['f.' + field] = {$each: [{_ts:0, _dead:1}, content], $slice: -this.maxVers, $sort: {_ts:1}};
 		fields['f.' + field] = 1;
 	}
 	fields.m = 1;

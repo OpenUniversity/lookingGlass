@@ -199,7 +199,7 @@ mfs.get('/hello/b', protect(done, function(err, result) {
 should write a file so that get() retrieves it.
 
 ```js
-mfs.put('/hello/world', {hello: 'world'}, protect(done, function(err) {
+mfs.put('/hello/world', {hello: 'world', _ts: '01000'}, protect(done, function(err) {
 	mfs.get('/hello/world', protect(done, function(err, file) {
 		assert.equal(file.hello, 'world', done);
 		done();
