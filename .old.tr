@@ -58,5 +58,5 @@
     Dispatcher(storage, tracker) should handle transactions that do not require futher action by forwaring them to storage: [2K[0G  ․ Dispatcher(storage, tracker) should handle transactions that do not require futher action by forwaring them to storage
     Dispatcher(storage, tracker) should write actions that require further treatment to the tracker: [2K[0G  ․ Dispatcher(storage, tracker) should write actions that require further treatment to the tracker
 
-  58 passing (542 ms)
+  58 passing (500 ms)
 
