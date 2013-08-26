@@ -271,8 +271,8 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
 		var mappings = doc.m;
 		if(doc.f) {
 			for(var field in put) {
-				field = self.encoder.encode(field);
 				var content = put[field];
+				field = self.encoder.encode(field);
 				var vers = doc.f[field];
 				if(vers) {
 					var latest = vers[vers.length - 1];
@@ -394,10 +394,10 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 	}
 };
 
-MFS.prototype.trans_ifExists = function(ifExists, update, fields, ts, query) {
-	for(var i = 0; i < ifExists.length; i++) {
-		var key = this.encoder.encode(ifExists[i]);
-		query['f.' + key] = {$exists:true};
+MFS.prototype.trans_tsCond = function(tsCond, update, fields, ts, query) {
+	for(var key in tsCond) {
+		var key = this.encoder.encode(key);
+		query['f.' + key + '._ts'] = tsCond[key];
 	}
 	return function(path, doc, actions) {}
 };

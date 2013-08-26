@@ -38,34 +38,31 @@ exports.Dispatcher = function(storage, tracker) {
 	};
 
 	function selectJob(dir) {
-		for(var i = 0; i < dir.length; i++) {
+		for(var i = 0; i < dir.length; i++) {	
+			if(dir[i].type != 'content') continue;
 			var name = dir[i].path;
 			var nameSplit = name.split('/');
 			name = nameSplit[nameSplit.length - 1];
 			if(name.substr(0, 1) != '^') {
-				return name;
+				return {name: name, content: dir[i].content};
 			}
 		}
 	}
 
 	this.tick = function(callback) {
 		util.seq([
-			function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
+			function(_) { tracker.transaction({path: '/jobs/1/', getDir: {expandFiles:1}}, _.to('dir')); },
 			function(_) {
 				this.job = selectJob(this.dir);
 				//if(!job) return callback(undefined); 
 				_();
 			},
-			function(_) { tracker.transaction({path: '/jobs/1/', getIfExists: [this.job]}, _.to('jobContent')); },
 			function(_) {
-				if(this.jobContent.length == 0) return callback(undefined);
-				assert.equal(this.jobContent.length, 1);
-				assert.equal(this.jobContent[0].type, 'content');
 				this.markJobInProgress = {};
-				this.markJobInProgress['^' + this.job] = this.jobContent[0].content;
+				this.markJobInProgress['^' + this.job.name] = this.job.content;
 				_();
 			},
-			function(_) { tracker.transaction({path: '/jobs/1/', ifExist: [this.job], remove: [this.job], put: this.markJobInProgress}, _); },
+			function(_) { tracker.transaction({path: '/jobs/1/', ifExist: [this.job.name], remove: [this.job.name], put: this.markJobInProgress}, _); },
 		], callback)();
 	};
 };

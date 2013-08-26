@@ -458,25 +458,26 @@ function describeStorageDriver(driverContainer) {
 					}));
 				});
 			});
-			describe('ifExists', function() {
-				it('should cause the transaction to be canceled if one of the given files does not exist', function(done) {
+			describe('tsCond', function() {
+				it('should cause the transaction to be canceled if one of the given files does not have the corresponding ts value', function(done) {
 					util.seq([
-						function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd', 'X'], put: {Y:{foo: 'bar'}}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', tsCond: {c: 'wrongTS'}, put: {Y:{foo: 'bar'}}}, _); },
 						function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
 						function(_) {
 							var dir = actionsToDir(this.actions);
-							assert(!dir['/a/b/Y'], 'Y should not be created because X does not exist');
+							assert(!dir['/a/b/Y'], 'Y should not be created because the timestamp for c is wrong');
 							_();
 						},
 					], done)();
 				});
-				it('should allow the transaction to happen if the files do exist', function(done) {
+				it('should allow the transaction to happen if the timestamps are accurate', function(done) {
 					util.seq([
-						function(_) { driver.transaction({path: '/a/b/', ifExists: ['c', 'd'], put: {Y:{foo: 'bar'}}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('c')); },
+						function(_) { driver.transaction({path: '/a/b/', tsCond: {c: this.c[0].content._ts}, put: {Y:{foo: 'bar'}}}, _); },
 						function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('actions')); },
 						function(_) {
 							var dir = actionsToDir(this.actions);
-							assert(dir['/a/b/Y'], 'Y should be created because c and d do exist');
+							assert(dir['/a/b/Y'], 'Y should be created because c has the correct timestamp');
 							_();
 						},
 					], done)();

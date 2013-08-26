@@ -203,7 +203,7 @@ MFS.prototype.transaction = function(trans, callback) {
 		}
 	});
 	if(hasFields(update)) {
-		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.ifExists?false:true), fields: fields}, post);
+		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.tsCond?false:true), fields: fields}, post);
 	} else {
 		this.coll.findOne(query, fields, post);
 	}
@@ -394,10 +394,10 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 	}
 };
 
-MFS.prototype.trans_ifExists = function(ifExists, update, fields, ts, query) {
-	for(var i = 0; i < ifExists.length; i++) {
-		var key = this.encoder.encode(ifExists[i]);
-		query['f.' + key] = {$exists:true};
+MFS.prototype.trans_tsCond = function(tsCond, update, fields, ts, query) {
+	for(var key in tsCond) {
+		var key = this.encoder.encode(key);
+		query['f.' + key + '._ts'] = tsCond[key];
 	}
 	return function(path, doc, actions) {}
 };
