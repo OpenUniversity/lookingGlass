@@ -60,9 +60,11 @@ exports.Dispatcher = function(storage, tracker) {
 			function(_) {
 				this.markJobInProgress = {};
 				this.markJobInProgress['^' + this.job.name] = this.job.content;
+				this.tsCond = {};
+				this.tsCond[this.job.name] = this.job.content._ts;
 				_();
 			},
-			function(_) { tracker.transaction({path: '/jobs/1/', ifExist: [this.job.name], remove: [this.job.name], put: this.markJobInProgress}, _); },
+			function(_) { tracker.transaction({path: '/jobs/1/', tsCond: this.tsCond, remove: [this.job.name], put: this.markJobInProgress}, _); },
 		], callback)();
 	};
 };
