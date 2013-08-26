@@ -111,4 +111,16 @@ exports.Encoder = function(allowedSpecial) {
 	}
 	
 };
+exports.parallel = function(n, callback) {
+	return function(err) {
+		if(err) {
+			n = -1;
+			callback(err);
+		}
+		n--;
+		if(n == 0) {
+			callback();
+		}
+	}
+};
 

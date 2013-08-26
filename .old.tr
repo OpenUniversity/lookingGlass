@@ -9,6 +9,8 @@
     util Encoder(allowedSpecial) .encode(str) should encode str in a way that will only include letters, digits or characters from allowedSpecial: [2K[0G  ․ util Encoder(allowedSpecial) .encode(str) should encode str in a way that will only include letters, digits or characters from allowedSpecial
     util Encoder(allowedSpecial) .encode(str) should throw an exception if less than three special characters are allowed: [2K[0G  ․ util Encoder(allowedSpecial) .encode(str) should throw an exception if less than three special characters are allowed
     util Encoder(allowedSpecial) .decode(enc) should decode a string encoded with .encode(): [2K[0G  ․ util Encoder(allowedSpecial) .decode(enc) should decode a string encoded with .encode()
+    util parallel(n, callback) should return a callback function that will call "callback" after it has been called n times: [2K[0G  ․ util parallel(n, callback) should return a callback function that will call "callback" after it has been called n times
+    util parallel(n, callback) should call the callback immediately with an error if an error is given to the parallel callback: [2K[0G  ․ util parallel(n, callback) should call the callback immediately with an error if an error is given to the parallel callback
     MongoFS should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS should retrieve the value with the highest _ts value
     MongoFS should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS should support any kind of characters in paths, with the exception that slash (/) and star (*)
     MongoFS .get(path, callback(err, file)) should retrieve the value of a file: [2K[0G  ․ MongoFS .get(path, callback(err, file)) should retrieve the value of a file
@@ -57,7 +59,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate
     Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage
     Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker
-    Dispatcher .tick(callback(err)) should select a pending task from the tracker and mark it in progress: [2K[0G  ․ Dispatcher .tick(callback(err)) should select a pending task from the tracker and mark it in progress
+    Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback
+    Dispatcher .tick(callback(err, job)) should select a different job on each call: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a different job on each call
 
-  59 passing (592 ms)
+  62 passing (616 ms)
 

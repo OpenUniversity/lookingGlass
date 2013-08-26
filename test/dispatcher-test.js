@@ -73,7 +73,7 @@ describe('Dispatcher', function() {
 			], done)();
 		});
 	});
-	describe('.tick(callback(err))', function() {
+	describe('.tick(callback(err, job))', function() {
 		beforeEach(function(done) {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
@@ -81,16 +81,16 @@ describe('Dispatcher', function() {
 				function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _); },
 			], done)();
 		});
-		it('should select a pending task from the tracker and mark it in progress', function(done) {
+		it('should select a pending task from the tracker, mark it in progress and emit it in the callback', function(done) {
 			util.seq([
-				function(_) { disp.tick(_); },
+				function(_) { disp.tick(_.to('job')); },
 				function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
 				function(_) {
 					var inProgress = 0;
 					for(var i = 0; i < this.dir.length; i++) {
 						var entry = this.dir[i];
 						assert.equal(entry.type, 'dir');
-						if(entry.path.substr(0, 9) == '/jobs/1/^') {
+						if(entry.path == '/jobs/1/^' + this.job.name) {
 							inProgress++;
 						}
 					}
@@ -98,6 +98,24 @@ describe('Dispatcher', function() {
 					_();
 				},
 			], done)();
+		});
+		it('should select a different job on each call', function(done) {
+			var jobs = {};
+			var test = function(done) {
+				util.seq([
+					function(_) { disp.tick(_.to('job')); },
+					function(_) {
+						assert(this.job, 'A job must be found');
+						assert(!jobs[this.job.name], 'Each job must be unique');
+						jobs[this.job.name] = 1;
+						_();
+					},
+				], done)();
+			}
+			var c = util.parallel(3, done);
+			test(c);
+			test(c);
+			test(c);
 		});
 	});
 });

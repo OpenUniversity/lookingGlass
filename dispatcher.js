@@ -40,6 +40,7 @@ exports.Dispatcher = function(storage, tracker) {
 	function selectJob(dir) {
 		for(var i = 0; i < dir.length; i++) {	
 			if(dir[i].type != 'content') continue;
+			if(dir[i].content._dead) continue;
 			var name = dir[i].path;
 			var nameSplit = name.split('/');
 			name = nameSplit[nameSplit.length - 1];
@@ -50,6 +51,7 @@ exports.Dispatcher = function(storage, tracker) {
 	}
 
 	this.tick = function(callback) {
+		var self = this;
 		util.seq([
 			function(_) { tracker.transaction({path: '/jobs/1/', getDir: {expandFiles:1}}, _.to('dir')); },
 			function(_) {
@@ -64,7 +66,19 @@ exports.Dispatcher = function(storage, tracker) {
 				this.tsCond[this.job.name] = this.job.content._ts;
 				_();
 			},
-			function(_) { tracker.transaction({path: '/jobs/1/', tsCond: this.tsCond, remove: [this.job.name], put: this.markJobInProgress}, _); },
+			function(_) { tracker.transaction({
+				path: '/jobs/1/', 
+				tsCond: this.tsCond, 
+				remove: [this.job.name], 
+				getIfExists: [this.job.name], 
+				put: this.markJobInProgress}, _.to('actions')); },
+			function(_) {
+				if(this.actions.length == 0) {
+					self.tick(callback);
+				}	else {
+					callback(undefined, this.job);
+				}
+			},
 		], callback)();
 	};
 };

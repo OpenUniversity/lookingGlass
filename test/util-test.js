@@ -92,5 +92,24 @@ describe('Encoder(allowedSpecial)', function() {
 	});
 });
 
+describe('parallel(n, callback)', function() {
+	it('should return a callback function that will call "callback" after it has been called n times', function(done) {
+		var c = util.parallel(100, done);
+		for(var i = 0; i < 200; i++) {
+			setTimeout(c, 20);
+		}
+	});
+	it('should call the callback immediately with an error if an error is given to the parallel callback', function(done) {
+		var c = util.parallel(4, function(err) {
+			assert(err, 'This should fail');
+			done();
+		});
+		c();
+		c();
+		c(new Error('Some error'));
+		c(); // This will not call the callback
+	});
+});
+
 });
 

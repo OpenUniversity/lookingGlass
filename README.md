@@ -6,6 +6,7 @@
      - [Encoder(allowedSpecial)](#util-encoderallowedspecial)
        - [.encode(str)](#util-encoderallowedspecial-encodestr)
        - [.decode(enc)](#util-encoderallowedspecial-decodeenc)
+     - [parallel(n, callback)](#util-paralleln-callback)
    - [MongoFS](#mongofs)
      - [.get(path, callback(err, file))](#mongofs-getpath-callbackerr-file)
      - [.put(path, file, callback(err))](#mongofs-putpath-file-callbackerr)
@@ -30,7 +31,7 @@
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-tscond)
    - [Dispatcher](#dispatcher)
      - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
-     - [.tick(callback(err))](#dispatcher-tickcallbackerr)
+     - [.tick(callback(err, job))](#dispatcher-tickcallbackerr-job)
 <a name=""></a>
  
 <a name="util"></a>
@@ -147,6 +148,30 @@ should decode a string encoded with .encode().
 var encoder = new util.Encoder(allowed);
 var str = 'This is a test' + specialChars + ' woo hoo\n';
 assert.equal(encoder.decode(encoder.encode(str)), str);
+```
+
+<a name="util-paralleln-callback"></a>
+## parallel(n, callback)
+should return a callback function that will call "callback" after it has been called n times.
+
+```js
+var c = util.parallel(100, done);
+for(var i = 0; i < 200; i++) {
+	setTimeout(c, 20);
+}
+```
+
+should call the callback immediately with an error if an error is given to the parallel callback.
+
+```js
+var c = util.parallel(4, function(err) {
+	assert(err, 'This should fail');
+	done();
+});
+c();
+c();
+c(new Error('Some error'));
+c(); // This will not call the callback
 ```
 
 <a name="mongofs"></a>
@@ -923,20 +948,20 @@ util.seq([
 ], done)();
 ```
 
-<a name="dispatcher-tickcallbackerr"></a>
-## .tick(callback(err))
-should select a pending task from the tracker and mark it in progress.
+<a name="dispatcher-tickcallbackerr-job"></a>
+## .tick(callback(err, job))
+should select a pending task from the tracker, mark it in progress and emit it in the callback.
 
 ```js
 util.seq([
-	function(_) { disp.tick(_); },
+	function(_) { disp.tick(_.to('job')); },
 	function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
 	function(_) {
 		var inProgress = 0;
 		for(var i = 0; i < this.dir.length; i++) {
 			var entry = this.dir[i];
 			assert.equal(entry.type, 'dir');
-			if(entry.path.substr(0, 9) == '/jobs/1/^') {
+			if(entry.path == '/jobs/1/^' + this.job.name) {
 				inProgress++;
 			}
 		}
@@ -944,5 +969,26 @@ util.seq([
 		_();
 	},
 ], done)();
+```
+
+should select a different job on each call.
+
+```js
+var jobs = {};
+var test = function(done) {
+	util.seq([
+		function(_) { disp.tick(_.to('job')); },
+		function(_) {
+			assert(this.job, 'A job must be found');
+			assert(!jobs[this.job.name], 'Each job must be unique');
+			jobs[this.job.name] = 1;
+			_();
+		},
+	], done)();
+}
+var c = util.parallel(3, done);
+test(c);
+test(c);
+test(c);
 ```
 
