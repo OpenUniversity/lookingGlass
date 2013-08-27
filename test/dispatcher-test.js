@@ -3,6 +3,13 @@ var util = require('../util.js');
 var Dispatcher = require('../dispatcher.js').Dispatcher;
 var assert = require('assert');
 
+function DummyScheduler(path) {
+	this.getPath = function() {
+		return path;
+	};
+}
+var scheduler = new DummyScheduler('/jobs/');
+
 describe('Dispatcher', function() {
 	var storage;
 	var tracker;
@@ -18,7 +25,7 @@ describe('Dispatcher', function() {
 				trackerColl = this.db.collection('tracker');
 				storage = new MFS(storageColl, {maxVers: 2});
 				tracker = new MFS(trackerColl, {maxVers: 2});
-				disp = new Dispatcher(storage, tracker);
+				disp = new Dispatcher(storage, tracker, scheduler);
 				_();
 			},
 			function(_) { storageColl.remove({}, _); },
@@ -50,14 +57,17 @@ describe('Dispatcher', function() {
 				]); _();},
 			], done)();
 		});
-		it('should write actions that require further treatment to the tracker', function(done) {
+		it('should write actions that require further treatment to the tracker, in a path provided by the scheduler', function(done) {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
 				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
 				function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _.to('mapActions')); },
-				function(_) { tracker.transaction({path: '/jobs/1/', getDir:{expandFiles:1}}, _.to('actions')); },
+				function(_) { assert.deepEqual(this.mapActions, []); _(); },
+				function(_) { tracker.transaction({
+					path: scheduler.getPath(), // We use a scheduler that always returns the same path
+					getDir:{expandFiles:1}}, 
+					_.to('actions')); },
 				function(_) {
-					assert.deepEqual(this.mapActions, []);
 					var mappings = {};
 					for(var i = 0; i < this.actions.length; i++) {
 						if(this.actions[i].type != 'content') continue;
@@ -84,13 +94,13 @@ describe('Dispatcher', function() {
 		it('should select a pending task from the tracker, mark it in progress and emit it in the callback', function(done) {
 			util.seq([
 				function(_) { disp.tick(_.to('job')); },
-				function(_) { tracker.transaction({path: '/jobs/1/', getDir: {}}, _.to('dir')); },
+				function(_) { tracker.transaction({path: scheduler.getPath(), getDir: {}}, _.to('dir')); },
 				function(_) {
 					var inProgress = 0;
 					for(var i = 0; i < this.dir.length; i++) {
 						var entry = this.dir[i];
 						assert.equal(entry.type, 'dir');
-						if(entry.path == '/jobs/1/^' + this.job.name) {
+						if(entry.path == scheduler.getPath() + '^' + this.job.name) {
 							inProgress++;
 						}
 					}
@@ -116,6 +126,31 @@ describe('Dispatcher', function() {
 			test(c);
 			test(c);
 			test(c);
+		});
+		it('should emit undefined as a job if no job is found', function(done) {
+			var jobs = {};
+			var pretest = function(done) {
+				util.seq([
+					function(_) { disp.tick(_.to('job')); },
+					function(_) {
+						assert(this.job, 'A job must be found');
+						assert(!jobs[this.job.name], 'Each job must be unique');
+						jobs[this.job.name] = 1;
+						_();
+					},
+				], done)();
+			}
+			var c = util.parallel(3, test);
+			// Run the pre-test three times to exhast all jobs
+			pretest(c);
+			pretest(c);
+			pretest(c);
+			function test() {
+				disp.tick(util.protect(done, function(err, job) {
+					assert(!job, 'No job should be emitted');
+					done();
+				}));
+			}
 		});
 	});
 });

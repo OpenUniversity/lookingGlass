@@ -59,9 +59,10 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate
     Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage
-    Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker
+    Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker, in a path provided by the scheduler: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker, in a path provided by the scheduler
     Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback
     Dispatcher .tick(callback(err, job)) should select a different job on each call: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a different job on each call
+    Dispatcher .tick(callback(err, job)) should emit undefined as a job if no job is found: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should emit undefined as a job if no job is found
 
-  63 passing (560 ms)
+  64 passing (635 ms)
 

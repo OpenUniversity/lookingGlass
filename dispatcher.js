@@ -3,7 +3,7 @@ var assert = require('assert');
 
 var immediateTypes = {content:1, dir:1};
 
-exports.Dispatcher = function(storage, tracker) {
+exports.Dispatcher = function(storage, tracker, scheduler) {
 	this.transaction = function(trans, callback) {
 		if(!trans._ts) {
 			trans._ts = util.timeUid();
@@ -30,7 +30,7 @@ exports.Dispatcher = function(storage, tracker) {
 					callback(undefined, retActions);
 				}
 			},
-			function(_) { tracker.transaction({path: '/jobs/1/', put: put}, _); },
+			function(_) { tracker.transaction({path: scheduler.getPath(), put: put}, _); },
 			function(_) { callback(undefined, retActions); },
 		], callback)();
 		storage.transaction(trans, util.protect(callback, function(err, actions) {
@@ -52,10 +52,10 @@ exports.Dispatcher = function(storage, tracker) {
 	this.tick = function(callback) {
 		var self = this;
 		util.seq([
-			function(_) { tracker.transaction({path: '/jobs/1/', getDir: {expandFiles:1}}, _.to('dir')); },
+			function(_) { tracker.transaction({path: scheduler.getPath(), getDir: {expandFiles:1}}, _.to('dir')); },
 			function(_) {
 				this.job = selectJob(this.dir);
-				//if(!job) return callback(undefined); 
+				if(!this.job) return callback(); 
 				_();
 			},
 			function(_) {
@@ -66,7 +66,7 @@ exports.Dispatcher = function(storage, tracker) {
 				_();
 			},
 			function(_) { tracker.transaction({
-				path: '/jobs/1/', 
+				path: scheduler.getPath(), 
 				tsCond: this.tsCond, 
 				remove: [this.job.name], 
 				getIfExists: [this.job.name], 
