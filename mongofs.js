@@ -144,14 +144,8 @@ MFS.prototype.remove = function(path, timestamp, callback) {
 MFS.prototype.createMapping = function(path, mapping, callback) {
 	this.transaction({path: path, map: mapping, _ts: mapping._ts}, callback);
 };
-MFS.prototype.trampoline = function(action, callback) { 
-	if(action.internalType == 'map') {
-		this.createMapping(action.path, action.mapping, callback);
-	} else if(action.internalType == 'unmap') {
-		this.removeMapping(action.path, action.mapping._ts, callback);
-	} else {
-		return callback(new Error('Operation ' + action.internalType + ' not supported'));
-	}
+MFS.prototype.trampoline = function(action, callback) {
+	this.transaction(action, callback);
 };
 
 MFS.prototype.removeMapping = function(path, ts, callback) {
@@ -322,7 +316,7 @@ MFS.prototype.trans_map = function(map, update, fields, ts) {
 				if(lastVer._dead) continue;
 				actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
 			} else {
-				actions.push({type: 'tramp', internalType: 'map', mapping: map, path: self.encoder.decode(path + key)});					
+				actions.push({type: 'tramp', map: map, path: self.encoder.decode(path + key), _ts: ts});
 			}
 		}
 	};
@@ -345,7 +339,7 @@ MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 				if(lastVer._dead) continue;
 				actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
 			} else {
-				actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: self.encoder.decode(path + key)});					
+				actions.push({type: 'tramp', unmap: map, path: self.encoder.decode(path + key), _ts: ts});					
 			}
 		}
 	};

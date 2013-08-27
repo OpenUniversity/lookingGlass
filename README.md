@@ -31,7 +31,8 @@
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-tscond)
    - [Dispatcher](#dispatcher)
      - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
-     - [.tick(callback(err, job))](#dispatcher-tickcallbackerr-job)
+     - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
+     - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
 <a name=""></a>
  
 <a name="util"></a>
@@ -951,7 +952,11 @@ util.seq([
 		for(var i = 0; i < this.actions.length; i++) {
 			if(this.actions[i].type != 'content') continue;
 			var content = this.actions[i].content;
-			assert.equal(content.mapping.m, 1);
+			if(content.type == 'map') {
+				assert.equal(content.mapping.m, 1);
+			} else {
+				assert.equal(content.map.m, 1);
+			}
 			mappings[content.type + ':' + content.path] = content;
 		}
 		assert(mappings['tramp:/a/b/e/'], 'tramp:/a/b/e/');
@@ -962,20 +967,20 @@ util.seq([
 ], done)();
 ```
 
-<a name="dispatcher-tickcallbackerr-job"></a>
-## .tick(callback(err, job))
+<a name="dispatcher-tickpath-callbackerr-job"></a>
+## .tick(path, callback(err, job))
 should select a pending task from the tracker, mark it in progress and emit it in the callback.
 
 ```js
 util.seq([
-	function(_) { disp.tick(_.to('job')); },
-	function(_) { tracker.transaction({path: scheduler.getPath(), getDir: {}}, _.to('dir')); },
+	function(_) { disp.tick(thePath, _.to('job')); },
+	function(_) { tracker.transaction({path: thePath, getDir: {}}, _.to('dir')); },
 	function(_) {
 		var inProgress = 0;
 		for(var i = 0; i < this.dir.length; i++) {
 			var entry = this.dir[i];
 			assert.equal(entry.type, 'dir');
-			if(entry.path == scheduler.getPath() + '^' + this.job.name) {
+			if(entry.path == thePath + '^' + this.job.name) {
 				inProgress++;
 			}
 		}
@@ -991,7 +996,7 @@ should select a different job on each call.
 var jobs = {};
 var test = function(done) {
 	util.seq([
-		function(_) { disp.tick(_.to('job')); },
+		function(_) { disp.tick(thePath, _.to('job')); },
 		function(_) {
 			assert(this.job, 'A job must be found');
 			assert(!jobs[this.job.name], 'Each job must be unique');
@@ -1009,28 +1014,48 @@ test(c);
 should emit undefined as a job if no job is found.
 
 ```js
-var jobs = {};
-var pretest = function(done) {
-	util.seq([
-		function(_) { disp.tick(_.to('job')); },
-		function(_) {
-			assert(this.job, 'A job must be found');
-			assert(!jobs[this.job.name], 'Each job must be unique');
-			jobs[this.job.name] = 1;
-			_();
-		},
-	], done)();
-}
-var c = util.parallel(3, test);
-// Run the pre-test three times to exhast all jobs
-pretest(c);
-pretest(c);
-pretest(c);
-function test() {
-	disp.tick(util.protect(done, function(err, job) {
-		assert(!job, 'No job should be emitted');
-		done();
-	}));
-}
+disp.tick('/wrong/path/', util.protect(done, function(err, job) {
+	assert(!job, 'No job should be emitted');
+	done();
+}));
+```
+
+should take the path from the scheduler if not provided.
+
+```js
+disp.tick(undefined, util.protect(done, function(err, job) {
+	assert(job, 'Found job');
+	done();
+}));
+```
+
+<a name="dispatcher-tockjob-callbackerr"></a>
+## tock(job, callback(err))
+should perform the given job.
+
+```js
+util.seq([
+	// Initially we should have a tramp action for propagating the mapping to /a/b/e/
+	// waiting to be picked up.
+	function(_) { disp.tick(undefined, _.to('job')); },
+	function(_) { disp.tock(this.job, _); },
+	// Now the action should be removed, and instead we should have mapping actions for
+	// /a/b/e/f and /a/b/e/g
+	function(_) { tracker.transaction({path: thePath, getDir: {expandFiles:1}}, _.to('dir')); },
+	function(_) {
+		assert.equal(this.dir.length, 4); // Two 'dir', two 'content'
+		var dir = {};
+		for(var i = 0; i < 4; i++) {
+			if(this.dir[i].type != 'content') continue;
+			var content = this.dir[i].content;
+			assert.equal(content.type, 'map');
+			assert.equal(content.mapping.m, 1);
+			dir[content.path] = content.value;
+		}
+		assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
+		assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
+		_();
+	},
+], done)();
 ```
 

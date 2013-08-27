@@ -322,7 +322,7 @@ MFS.prototype.trans_map = function(map, update, fields, ts) {
 				if(lastVer._dead) continue;
 				actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
 			} else {
-				actions.push({type: 'tramp', internalType: 'map', mapping: map, path: self.encoder.decode(path + key)});					
+				actions.push({type: 'tramp', map: map, path: self.encoder.decode(path + key), _ts: ts});
 			}
 		}
 	};
@@ -345,7 +345,7 @@ MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 				if(lastVer._dead) continue;
 				actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
 			} else {
-				actions.push({type: 'tramp', internalType: 'unmap', mapping: map, path: self.encoder.decode(path + key)});					
+				actions.push({type: 'tramp', unmap: map, path: self.encoder.decode(path + key), _ts: ts});					
 			}
 		}
 	};
@@ -388,11 +388,11 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 				if(vers.length == 0) throw new Error('No versions for ' + path);
 				var content = vers[vers.length - 1];
 				if(content._dead) continue;
+				if(options.expandFiles) {
+					actions.push({type: 'content', path: path + key, content: content});
+				}
 			}
 			actions.push({type: 'dir', path: path + key});
-			if(options.expandFiles) {
-				actions.push({type: 'content', path: path + key, content: content});
-			}
 		}
 	}
 };

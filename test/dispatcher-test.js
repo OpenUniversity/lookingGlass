@@ -8,7 +8,8 @@ function DummyScheduler(path) {
 		return path;
 	};
 }
-var scheduler = new DummyScheduler('/jobs/');
+var thePath = '/some/path/';
+var scheduler = new DummyScheduler(thePath);
 
 describe('Dispatcher', function() {
 	var storage;
@@ -72,7 +73,11 @@ describe('Dispatcher', function() {
 					for(var i = 0; i < this.actions.length; i++) {
 						if(this.actions[i].type != 'content') continue;
 						var content = this.actions[i].content;
-						assert.equal(content.mapping.m, 1);
+						if(content.type == 'map') {
+							assert.equal(content.mapping.m, 1);
+						} else {
+							assert.equal(content.map.m, 1);
+						}
 						mappings[content.type + ':' + content.path] = content;
 					}
 					assert(mappings['tramp:/a/b/e/'], 'tramp:/a/b/e/');
@@ -83,7 +88,7 @@ describe('Dispatcher', function() {
 			], done)();
 		});
 	});
-	describe('.tick(callback(err, job))', function() {
+	describe('.tick(path, callback(err, job))', function() {
 		beforeEach(function(done) {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
@@ -93,14 +98,14 @@ describe('Dispatcher', function() {
 		});
 		it('should select a pending task from the tracker, mark it in progress and emit it in the callback', function(done) {
 			util.seq([
-				function(_) { disp.tick(_.to('job')); },
-				function(_) { tracker.transaction({path: scheduler.getPath(), getDir: {}}, _.to('dir')); },
+				function(_) { disp.tick(thePath, _.to('job')); },
+				function(_) { tracker.transaction({path: thePath, getDir: {}}, _.to('dir')); },
 				function(_) {
 					var inProgress = 0;
 					for(var i = 0; i < this.dir.length; i++) {
 						var entry = this.dir[i];
 						assert.equal(entry.type, 'dir');
-						if(entry.path == scheduler.getPath() + '^' + this.job.name) {
+						if(entry.path == thePath + '^' + this.job.name) {
 							inProgress++;
 						}
 					}
@@ -113,7 +118,7 @@ describe('Dispatcher', function() {
 			var jobs = {};
 			var test = function(done) {
 				util.seq([
-					function(_) { disp.tick(_.to('job')); },
+					function(_) { disp.tick(thePath, _.to('job')); },
 					function(_) {
 						assert(this.job, 'A job must be found');
 						assert(!jobs[this.job.name], 'Each job must be unique');
@@ -128,29 +133,49 @@ describe('Dispatcher', function() {
 			test(c);
 		});
 		it('should emit undefined as a job if no job is found', function(done) {
-			var jobs = {};
-			var pretest = function(done) {
-				util.seq([
-					function(_) { disp.tick(_.to('job')); },
-					function(_) {
-						assert(this.job, 'A job must be found');
-						assert(!jobs[this.job.name], 'Each job must be unique');
-						jobs[this.job.name] = 1;
-						_();
-					},
-				], done)();
-			}
-			var c = util.parallel(3, test);
-			// Run the pre-test three times to exhast all jobs
-			pretest(c);
-			pretest(c);
-			pretest(c);
-			function test() {
-				disp.tick(util.protect(done, function(err, job) {
-					assert(!job, 'No job should be emitted');
-					done();
-				}));
-			}
+			disp.tick('/wrong/path/', util.protect(done, function(err, job) {
+				assert(!job, 'No job should be emitted');
+				done();
+			}));
+		});
+		it('should take the path from the scheduler if not provided', function(done) {
+			disp.tick(undefined, util.protect(done, function(err, job) {
+				assert(job, 'Found job');
+				done();
+			}));
+		});
+	});
+	describe('tock(job, callback(err))', function() {
+		beforeEach(function(done) {
+			util.seq([
+				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
+				function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _); },
+			], done)();
+		});
+		it('should perform the given job', function(done) {
+			util.seq([
+				// Initially we should have a tramp action for propagating the mapping to /a/b/e/
+				// waiting to be picked up.
+				function(_) { disp.tick(undefined, _.to('job')); },
+				function(_) { disp.tock(this.job, _); },
+				// Now the action should be removed, and instead we should have mapping actions for
+				// /a/b/e/f and /a/b/e/g
+				function(_) { tracker.transaction({path: thePath, getDir: {expandFiles:1}}, _.to('dir')); },
+				function(_) {
+					assert.equal(this.dir.length, 4); // Two 'dir', two 'content'
+					var dir = {};
+					for(var i = 0; i < 4; i++) {
+						if(this.dir[i].type != 'content') continue;
+						var content = this.dir[i].content;
+						assert.equal(content.type, 'map');
+						assert.equal(content.mapping.m, 1);
+						dir[content.path] = content.value;
+					}
+					assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
+					assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
+					_();
+				},
+			], done)();
 		});
 	});
 });

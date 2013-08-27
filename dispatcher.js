@@ -13,28 +13,8 @@ exports.Dispatcher = function(storage, tracker, scheduler) {
 		var retActions = [];
 		util.seq([
 			function(_) { storage.transaction(trans, _.to('actions')); },
-			function(_) {
-				var needsTracking = false;
-				for(var i = 0; i < this.actions.length; i++) {
-					var action = this.actions[i];
-					if(immediateTypes[action.type]) {
-						retActions.push(action);
-					} else {
-						put[trans._ts + '-' + actionTuid + '-' + i] = action;
-						needsTracking = true;
-					}
-				}
-				if(needsTracking) {
-					_();
-				} else {
-					callback(undefined, retActions);
-				}
-			},
-			function(_) { tracker.transaction({path: scheduler.getPath(), put: put}, _); },
-			function(_) { callback(undefined, retActions); },
+			function(_) { trackActions(this.actions, trans._ts, undefined, _); },
 		], callback)();
-		storage.transaction(trans, util.protect(callback, function(err, actions) {
-		}));
 	};
 
 	function selectJob(dir) {
@@ -43,16 +23,18 @@ exports.Dispatcher = function(storage, tracker, scheduler) {
 			var name = dir[i].path;
 			var nameSplit = name.split('/');
 			name = nameSplit[nameSplit.length - 1];
+			var path = nameSplit.slice(0, nameSplit.length - 1).join('/') + '/';
 			if(name.substr(0, 1) != '^') {
-				return {name: name, content: dir[i].content};
+				return {name: name, content: dir[i].content, path: path};
 			}
 		}
 	}
 
-	this.tick = function(callback) {
+	this.tick = function(path, callback) {
+		path = path || scheduler.getPath();
 		var self = this;
 		util.seq([
-			function(_) { tracker.transaction({path: scheduler.getPath(), getDir: {expandFiles:1}}, _.to('dir')); },
+			function(_) { tracker.transaction({path: path, getDir: {expandFiles:1}}, _.to('dir')); },
 			function(_) {
 				this.job = selectJob(this.dir);
 				if(!this.job) return callback(); 
@@ -73,11 +55,49 @@ exports.Dispatcher = function(storage, tracker, scheduler) {
 				put: this.markJobInProgress}, _.to('actions')); },
 			function(_) {
 				if(this.actions.length == 0) {
-					self.tick(callback);
+					self.tick(path, callback);
 				}	else {
 					callback(undefined, this.job);
 				}
 			},
 		], callback)();
 	};
+
+	this.tock = function(job, callback) {
+		var self = this;
+		this['do_' + job.content.type](job, util.protect(callback, function(err, actions) {
+			trackActions(actions, job.content._ts, job, callback);
+		}));
+	};
+	function trackActions(actions, ts, job, callback) {
+		var actionTuid = util.timeUid();
+		var put = {};
+		var retActions = [];
+		var needsTracking = false;
+		for(var i = 0; i < actions.length; i++) {
+			var action = actions[i];
+			if(immediateTypes[action.type]) {
+				retActions.push(action);
+			} else {
+				put[ts + '-' + actionTuid + '-' + i] = action;
+				needsTracking = true;
+			}
+		}
+		var trans = {path: scheduler.getPath(), put: put};
+		if(job) {
+			trans['remove'] = ['^' + job.name];
+		}
+		if(needsTracking) {
+			tracker.transaction(trans, util.protect(callback, function() {
+				callback(undefined, retActions);
+			}));
+		} else {
+			callback(undefined, retActions);
+		}
+	}
+
+	this.do_tramp = function(job, callback) {
+		storage.transaction(job.content, callback);
+	};
 };
+
