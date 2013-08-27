@@ -55,6 +55,7 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit dir actions for all files in the directory
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should behave properly when used in conjunction with get
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should emit content entries with file contents when using the expandFiles option
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should not emit files that have been deleted: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should not emit files that have been deleted
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate
     Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage
@@ -62,5 +63,5 @@
     Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback
     Dispatcher .tick(callback(err, job)) should select a different job on each call: [2K[0G  ․ Dispatcher .tick(callback(err, job)) should select a different job on each call
 
-  62 passing (616 ms)
+  63 passing (560 ms)
 

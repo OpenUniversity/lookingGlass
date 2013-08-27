@@ -40,7 +40,6 @@ exports.Dispatcher = function(storage, tracker) {
 	function selectJob(dir) {
 		for(var i = 0; i < dir.length; i++) {	
 			if(dir[i].type != 'content') continue;
-			if(dir[i].content._dead) continue;
 			var name = dir[i].path;
 			var nameSplit = name.split('/');
 			name = nameSplit[nameSplit.length - 1];

@@ -203,7 +203,7 @@ MFS.prototype.transaction = function(trans, callback) {
 		}
 	});
 	if(hasFields(update)) {
-		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.ifExists?false:true), fields: fields}, post);
+		this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.tsCond?false:true), fields: fields}, post);
 	} else {
 		this.coll.findOne(query, fields, post);
 	}
@@ -383,11 +383,14 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 		var fields = doc.f;
 		if(!fields) return;
 		for(var key in fields) {
-			actions.push({type: 'dir', path: path + key});
-			if(options.expandFiles) {
-				var vers = fields[key];
+			var vers = fields[key];
+			if(Array.isArray(vers)) {
 				if(vers.length == 0) throw new Error('No versions for ' + path);
 				var content = vers[vers.length - 1];
+				if(content._dead) continue;
+			}
+			actions.push({type: 'dir', path: path + key});
+			if(options.expandFiles) {
 				actions.push({type: 'content', path: path + key, content: content});
 			}
 		}

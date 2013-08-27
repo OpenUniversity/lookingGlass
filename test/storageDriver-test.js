@@ -457,6 +457,14 @@ function describeStorageDriver(driverContainer) {
 						done();
 					}));
 				});
+				it('should not emit files that have been deleted', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/foo/bar', put:{baz:{x:2}}}, _); },
+						function(_) { driver.transaction({path: '/foo/bar', remove:['baz']}, _); },
+						function(_) { driver.transaction({path: '/foo/bar', getDir:{}}, _.to('dir')); },
+						function(_) { assert.equal(this.dir.length, 0); _(); },
+					], done)();
+				});
 			});
 			describe('tsCond', function() {
 				it('should cause the transaction to be canceled if one of the given files does not have the corresponding ts value', function(done) {

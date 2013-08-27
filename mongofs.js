@@ -383,13 +383,16 @@ MFS.prototype.trans_getDir = function(options, update, fields, ts) {
 		var fields = doc.f;
 		if(!fields) return;
 		for(var key in fields) {
-			actions.push({type: 'dir', path: path + key});
-			if(options.expandFiles) {
-				var vers = fields[key];
+			var vers = fields[key];
+			if(Array.isArray(vers)) {
 				if(vers.length == 0) throw new Error('No versions for ' + path);
 				var content = vers[vers.length - 1];
-				actions.push({type: 'content', path: path + key, content: content});
+				if(content._dead) continue;
+				if(options.expandFiles) {
+					actions.push({type: 'content', path: path + key, content: content});
+				}
 			}
+			actions.push({type: 'dir', path: path + key});
 		}
 	}
 };
