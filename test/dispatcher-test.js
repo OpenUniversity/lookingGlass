@@ -178,5 +178,30 @@ describe('Dispatcher', function() {
 			], done)();
 		});
 	});
+	describe('.start() and .stop()', function() {
+		beforeEach(function(done) {
+			util.seq([
+				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
+			], done)();
+		});
+		it('should cause the dispatcher to automatically take tasks and execute them', function(done) {
+			disp.start();
+			util.seq([
+				function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _); },
+				function(_) { setTimeout(_, 100); }, // should be plenty of time to propagate the mapping
+				function(_) { storage.transaction({path:'/a/b/e/', put:{h:{a:5}}}, _.to('actions')); },
+				function(_) {
+					assert.equal(this.actions.length, 1);
+					assert.equal(this.actions[0].type, 'map');
+					assert.equal(this.actions[0].path, '/a/b/e/h');
+					assert.equal(this.actions[0].content.a, 5);
+					assert.equal(this.actions[0].mapping.m, 1);
+					disp.stop();
+					_();
+				},
+			], done)();
+			
+		});
+	});
 });
 

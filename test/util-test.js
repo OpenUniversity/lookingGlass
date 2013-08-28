@@ -111,5 +111,37 @@ describe('parallel(n, callback)', function() {
 	});
 });
 
+describe('Worker', function() {
+	it('should call a given function iteratively, in given intervals, until stopped', function(done) {
+		var n = 0;
+		function f(callback) {
+			n++;
+			callback();
+		}
+		var worker = new util.Worker(f, 10 /*ms intervals*/);
+		worker.start();
+		setTimeout(util.protect(done, function() {
+			worker.stop();
+			assert(n >= 9 && n <= 11, 'n should be 10 +- 1 (' + n + ')');
+			done();
+		}), 100);
+	});
+	it('should assure that no more than a given number of instances of the function are running at any given time', function(done) {
+		var n = 0;
+		function f(callback) {
+			n++;
+			setTimeout(callback, 50); // Each run will take 50 ms
+		}
+		var worker = new util.Worker(f, 10 /*ms intervals*/, 2 /* instances in parallel */);
+		worker.start();
+		setTimeout(util.protect(done, function() {
+			worker.stop();
+			// Two parallel 50 ms instances over 100 ms gives us 4 instances.
+			assert(n >= 3 && n <= 5, 'n should be 4 +- 1 (' + n + ')');
+			done();
+		}), 100);
+	});
+});
+
 });
 

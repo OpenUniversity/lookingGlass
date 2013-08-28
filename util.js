@@ -124,3 +124,31 @@ exports.parallel = function(n, callback) {
 	}
 };
 
+exports.Worker = function(f, interval, maxInstances) {
+	var lastTime = 0;
+	var running = false;
+	var numInstances = 0;
+	this.start = function() {
+		running = true;
+		tick();
+	};
+	var tick = function() {
+		var self = this;
+		while(running) {
+			var timeElapsed = (new Date()).getTime() - lastTime;
+			if(timeElapsed < interval) {
+				setTimeout(tick, interval - timeElapsed);
+				break;
+			}
+			lastTime = (new Date()).getTime();
+			if(!maxInstances || numInstances < maxInstances) {
+				numInstances++;
+				f(function() {numInstances--;});
+			}
+		}
+	};
+	this.stop = function() {
+		running = false;
+	};
+};
+

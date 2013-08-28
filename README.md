@@ -7,6 +7,7 @@
        - [.encode(str)](#util-encoderallowedspecial-encodestr)
        - [.decode(enc)](#util-encoderallowedspecial-decodeenc)
      - [parallel(n, callback)](#util-paralleln-callback)
+     - [Worker](#util-worker)
    - [MongoFS](#mongofs)
      - [.get(path, callback(err, file))](#mongofs-getpath-callbackerr-file)
      - [.put(path, file, callback(err))](#mongofs-putpath-file-callbackerr)
@@ -33,6 +34,7 @@
      - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
      - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
      - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
+     - [.start() and .stop()](#dispatcher-start-and-stop)
 <a name=""></a>
  
 <a name="util"></a>
@@ -173,6 +175,43 @@ c();
 c();
 c(new Error('Some error'));
 c(); // This will not call the callback
+```
+
+<a name="util-worker"></a>
+## Worker
+should call a given function iteratively, in given intervals, until stopped.
+
+```js
+var n = 0;
+function f(callback) {
+	n++;
+	callback();
+}
+var worker = new util.Worker(f, 10 /*ms intervals*/);
+worker.start();
+setTimeout(util.protect(done, function() {
+	worker.stop();
+	assert(n >= 9 && n <= 11, 'n should be 10 +- 1 (' + n + ')');
+	done();
+}), 100);
+```
+
+should assure that no more than a given number of instances of the function are running at any given time.
+
+```js
+var n = 0;
+function f(callback) {
+	n++;
+	setTimeout(callback, 50); // Each run will take 50 ms
+}
+var worker = new util.Worker(f, 10 /*ms intervals*/, 2 /* instances in parallel */);
+worker.start();
+setTimeout(util.protect(done, function() {
+	worker.stop();
+	// Two parallel 50 ms instances over 100 ms gives us 4 instances.
+	assert(n >= 3 && n <= 5, 'n should be 4 +- 1 (' + n + ')');
+	done();
+}), 100);
 ```
 
 <a name="mongofs"></a>
@@ -1054,6 +1093,28 @@ util.seq([
 		}
 		assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
 		assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
+		_();
+	},
+], done)();
+```
+
+<a name="dispatcher-start-and-stop"></a>
+## .start() and .stop()
+should cause the dispatcher to automatically take tasks and execute them.
+
+```js
+disp.start();
+util.seq([
+	function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _); },
+	function(_) { setTimeout(_, 100); }, // should be plenty of time to propagate the mapping
+	function(_) { storage.transaction({path:'/a/b/e/', put:{h:{a:5}}}, _.to('actions')); },
+	function(_) {
+		assert.equal(this.actions.length, 1);
+		assert.equal(this.actions[0].type, 'map');
+		assert.equal(this.actions[0].path, '/a/b/e/h');
+		assert.equal(this.actions[0].content.a, 5);
+		assert.equal(this.actions[0].mapping.m, 1);
+		disp.stop();
 		_();
 	},
 ], done)();

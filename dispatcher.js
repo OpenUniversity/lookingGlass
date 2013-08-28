@@ -4,6 +4,8 @@ var assert = require('assert');
 var immediateTypes = {content:1, dir:1};
 
 exports.Dispatcher = function(storage, tracker, scheduler) {
+	var worker = new util.Worker(tickTock, 10);
+
 	this.transaction = function(trans, callback) {
 		if(!trans._ts) {
 			trans._ts = util.timeUid();
@@ -99,5 +101,21 @@ exports.Dispatcher = function(storage, tracker, scheduler) {
 	this.do_tramp = function(job, callback) {
 		storage.transaction(job.content, callback);
 	};
+	
+	this.start = function() {
+		worker.start();
+	};
+	this.stop = function() {
+		worker.stop();
+	};
+
+	var self = this;
+	function tickTock(callback) {
+		self.tick(undefined, util.protect(callback, function(err, job) {
+			if(job) {
+				self.tock(job, callback);
+			}
+		}));
+	}
 };
 
