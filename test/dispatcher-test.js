@@ -169,7 +169,7 @@ describe('Dispatcher', function() {
 						var content = this.dir[i].content;
 						assert.equal(content.type, 'map');
 						assert.equal(content.mapping.m, 1);
-						dir[content.path] = content.value;
+						dir[content.path] = content.content;
 					}
 					assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
 					assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});

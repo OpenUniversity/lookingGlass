@@ -314,7 +314,7 @@ MFS.prototype.trans_map = function(map, update, fields, ts) {
 				if(vers.length == 0) continue;
 				var lastVer = vers[vers.length - 1];
 				if(lastVer._dead) continue;
-				actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
+				actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), content: lastVer});
 			} else {
 				actions.push({type: 'tramp', map: map, path: self.encoder.decode(path + key), _ts: ts});
 			}
@@ -337,7 +337,7 @@ MFS.prototype.trans_unmap = function(map, update, fields, ts) {
 				if(vers.length == 0) continue;
 				var lastVer = vers[vers.length - 1];
 				if(lastVer._dead) continue;
-				actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), value: lastVer});
+				actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), content: lastVer});
 			} else {
 				actions.push({type: 'tramp', unmap: map, path: self.encoder.decode(path + key), _ts: ts});					
 			}

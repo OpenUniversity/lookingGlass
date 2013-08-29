@@ -152,3 +152,27 @@ exports.Worker = function(f, interval, maxInstances) {
 	};
 };
 
+exports.httpJsonReq = function(method, URL, content, callback) {
+	var http = require('http');
+	var url = require('url');
+	var parsedURL = url.parse(URL);
+	var client = http.createClient(parsedURL.port, parsedURL.hostname);
+	var request = client.request(method, parsedURL.path, {host: parsedURL.host});
+	if(content) {
+		request.end(JSON.stringify(content));
+	} else {
+		request.end();
+	}
+	request.on('error', callback);
+	request.on('response', function(resp) {
+		var data = '';
+		resp.setEncoding('utf8');
+		resp.on('data', function(chunk) {
+			data += chunk;
+		});
+		resp.on('end', exports.protect(function() {
+			callback(undefined, resp.statusCode, resp.headers, JSON.parse(data));
+		}));
+	});
+};
+

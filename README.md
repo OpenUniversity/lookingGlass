@@ -35,6 +35,7 @@
      - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
      - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
      - [.start() and .stop()](#dispatcher-start-and-stop)
+   - [MirrorMapper](#mirrormapper)
 <a name=""></a>
  
 <a name="util"></a>
@@ -1089,7 +1090,7 @@ util.seq([
 			var content = this.dir[i].content;
 			assert.equal(content.type, 'map');
 			assert.equal(content.mapping.m, 1);
-			dir[content.path] = content.value;
+			dir[content.path] = content.content;
 		}
 		assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
 		assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
@@ -1115,6 +1116,30 @@ util.seq([
 		assert.equal(this.actions[0].content.a, 5);
 		assert.equal(this.actions[0].mapping.m, 1);
 		disp.stop();
+		_();
+	},
+], done)();
+```
+
+<a name="mirrormapper"></a>
+# MirrorMapper
+should returns content objects identical to the source, except changing the path.
+
+```js
+util.seq([
+	function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/', {
+		type: 'map',
+		mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
+		path: '/a/b/c/d',
+		content: {foo: 'bar'},
+	}, _.to('status', 'headers', 'response')); },
+	function(_) {
+		assert.equal(this.status, 200);
+		assert.equal(this.headers['content-type'], 'application/json');
+		assert.equal(this.response.length, 1);
+		assert.equal(this.response[0].type, 'content');
+		assert.equal(this.response[0].path, '/X/Y/c/d');
+		assert.equal(this.response[0].content.foo, 'bar');
 		_();
 	},
 ], done)();

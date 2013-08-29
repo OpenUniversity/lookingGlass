@@ -3,8 +3,9 @@ var assert = require('assert');
 
 var immediateTypes = {content:1, dir:1};
 
-exports.Dispatcher = function(storage, tracker, scheduler) {
-	var worker = new util.Worker(tickTock, 10);
+exports.Dispatcher = function(storage, tracker, scheduler, options) {
+	options = options || {workerInterval: 10};
+	var worker = new util.Worker(tickTock, options.workerInterval, options.workerMaxInst);
 
 	this.transaction = function(trans, callback) {
 		if(!trans._ts) {
