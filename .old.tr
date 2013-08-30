@@ -60,6 +60,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should not emit files that have been deleted: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) getDir should not emit files that have been deleted
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) tsCond should allow the transaction to happen if the timestamps are accurate
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) accum should create files containing numbers, when given names that do not exist: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) accum should create files containing numbers, when given names that do not exist
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) accum should add the given number to each file, and emit the previous value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) accum should add the given number to each file, and emit the previous value
     Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage
     Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker, in a path provided by the scheduler: [2K[0G  ․ Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker, in a path provided by the scheduler
     Dispatcher .tick(path, callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback: [2K[0G  ․ Dispatcher .tick(path, callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback
@@ -68,8 +70,10 @@
     Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided: [2K[0G  ․ Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided
     Dispatcher tock(job, callback(err)) should perform the given job: [2K[0G  ․ Dispatcher tock(job, callback(err)) should perform the given job
     Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them: [2K[0G  ․ Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them
+  - Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete
     Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
-  71 passing (1 seconds)
+  73 passing (1 seconds)
+  1 pending
 

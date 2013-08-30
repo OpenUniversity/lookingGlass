@@ -18,6 +18,8 @@ describe('Dispatcher', function() {
 	var trackerColl;
 	var disp;
 	var driverContainer = {};
+	var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
+	var mapper = new MirrorMapper(12345);
 	before(function(done) {
 		util.seq([
 			function(_) { require("mongodb").MongoClient.connect('mongodb://127.0.0.1:27017/test', _.to('db')); },
@@ -202,9 +204,7 @@ describe('Dispatcher', function() {
 			], done)();
 		});
 	});
-	describe('mapping', function() {
-		var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
-		var mapper = new MirrorMapper(12345);
+	describe.skip('.wait(ts, callback(err))', function() {
 		beforeEach(function(done) {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
@@ -215,7 +215,39 @@ describe('Dispatcher', function() {
 		});
 		afterEach(function() {
 			disp.stop();
-			//mapper.stop(done);
+			mapper.stop(function(){});
+		});
+		it('should trigger the callback after all work related to this ts has been complete', function(done) {
+			util.seq([
+				function(_) { disp.transaction({
+					_ts: '01002',
+					path:'/a/b/', 
+					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+				}, _); },
+				function(_) { disp.wait('01002', _); }, // Let the mapping propagate
+				function(_) { disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
+				function(_) { disp.wait('01003', _); }, // Let the new value get mapped
+				function(_) { disp.transaction({path: '/P/Q/h/', get:['i']}, _.to('i')); },
+				function(_) {
+					assert.equal(this.i.length, 1);
+					assert.equal(this.i[0].content.a, 5);
+					_();
+				},
+			], done)();
+		});
+	});
+	describe('mapping', function() {
+		beforeEach(function(done) {
+			util.seq([
+				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
+				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
+				function(_) { mapper.start(); _(); },
+				function(_) { disp.start(); setTimeout(_, 30); },
+			], done)();
+		});
+		afterEach(function() {
+			disp.stop();
+			mapper.stop(function() {});
 		});
 		it('should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers', function(done) {
 			util.seq([

@@ -391,5 +391,26 @@ MFS.prototype.trans_tsCond = function(tsCond, update, fields, ts, query) {
 	return function(path, doc, actions) {}
 };
 
+MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
+	if(!update.$inc) {
+		update.$inc = {};
+	}
+	for(var key in accum) {
+		var encKey = this.encoder.encode(key);
+		update.$inc['f.' + encKey] = accum[key];
+		fields['f.' + encKey] = 1;
+	}
+	var self = this;
+	return function(path, doc, actions) {
+		for(var key in accum) {
+			var field = self.encoder.encode(key);
+			if(!doc.f) continue;
+			if(!(field in doc.f)) continue;
+			var content = doc.f[field];
+			actions.push({type: 'content', path: path + field, content: content});
+		}
+	};
+};
+
 exports.MFS = MFS;
 

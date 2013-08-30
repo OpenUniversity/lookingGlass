@@ -138,5 +138,9 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 			}
 		}));
 	};
+
+	this.wait = function(ts, callback) {
+		callback();
+	};
 };
 

@@ -30,11 +30,13 @@
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getifexists)
          - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getdir)
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-tscond)
+         - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-accum)
    - [Dispatcher](#dispatcher)
      - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
      - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
      - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
      - [.start() and .stop()](#dispatcher-start-and-stop)
+     - [.wait(ts, callback(err))](#dispatcher-waitts-callbackerr)
      - [mapping](#dispatcher-mapping)
    - [MirrorMapper](#mirrormapper)
 <a name=""></a>
@@ -951,6 +953,49 @@ util.seq([
 ], done)();
 ```
 
+<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-actions-accum"></a>
+#### accum
+should create files containing numbers, when given names that do not exist.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/a/b/', accum: {num:3, ber:6}}, _); },
+	function(_) { driver.transaction({path: '/a/b/', accum: {num:0, ber:0}}, _.to('actions')); },
+	function(_) {
+		assert.equal(this.actions.length, 2);
+		assert.equal(this.actions[0].type, 'content');
+		assert.equal(this.actions[0].path, '/a/b/num');
+		assert.equal(this.actions[0].content, 3);
+		assert.equal(this.actions[1].type, 'content');
+		assert.equal(this.actions[1].path, '/a/b/ber');
+		assert.equal(this.actions[1].content, 6);
+		_();
+	},
+], done)();
+```
+
+should add the given number to each file, and emit the previous value.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/a/b/', accum: {num:4, ber:-2}}, _.to('before')); },
+	function(_) { driver.transaction({path: '/a/b/', accum: {num:0, ber:0}}, _.to('after')); },
+	function(_) {
+		assert.equal(this.before.length, 2);
+		assert.equal(this.before[0].path, '/a/b/num');
+		assert.equal(this.before[0].content, 3);
+		assert.equal(this.before[1].path, '/a/b/ber');
+		assert.equal(this.before[1].content, 6);
+		assert.equal(this.after.length, 2);
+		assert.equal(this.after[0].path, '/a/b/num');
+		assert.equal(this.after[0].content, 7);
+		assert.equal(this.after[1].path, '/a/b/ber');
+		assert.equal(this.after[1].content, 4);
+		_();
+	},
+], done)();
+```
+
 <a name="dispatcher"></a>
 # Dispatcher
 <a name="dispatcher-transactiontrans-callbackerr-actions"></a>
@@ -1122,6 +1167,8 @@ util.seq([
 ], done)();
 ```
 
+<a name="dispatcher-waitts-callbackerr"></a>
+## .wait(ts, callback(err))
 <a name="dispatcher-mapping"></a>
 ## mapping
 should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers.

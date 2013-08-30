@@ -491,6 +491,43 @@ function describeStorageDriver(driverContainer) {
 					], done)();
 				});
 			});
+			describe('accum', function() {
+				it('should create files containing numbers, when given names that do not exist', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/a/b/', accum: {num:3, ber:6}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', accum: {num:0, ber:0}}, _.to('actions')); },
+						function(_) {
+							assert.equal(this.actions.length, 2);
+							assert.equal(this.actions[0].type, 'content');
+							assert.equal(this.actions[0].path, '/a/b/num');
+							assert.equal(this.actions[0].content, 3);
+							assert.equal(this.actions[1].type, 'content');
+							assert.equal(this.actions[1].path, '/a/b/ber');
+							assert.equal(this.actions[1].content, 6);
+							_();
+						},
+					], done)();
+				});
+				it('should add the given number to each file, and emit the previous value', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/a/b/', accum: {num:4, ber:-2}}, _.to('before')); },
+						function(_) { driver.transaction({path: '/a/b/', accum: {num:0, ber:0}}, _.to('after')); },
+						function(_) {
+							assert.equal(this.before.length, 2);
+							assert.equal(this.before[0].path, '/a/b/num');
+							assert.equal(this.before[0].content, 3);
+							assert.equal(this.before[1].path, '/a/b/ber');
+							assert.equal(this.before[1].content, 6);
+							assert.equal(this.after.length, 2);
+							assert.equal(this.after[0].path, '/a/b/num');
+							assert.equal(this.after[0].content, 7);
+							assert.equal(this.after[1].path, '/a/b/ber');
+							assert.equal(this.after[1].content, 4);
+							_();
+						},
+					], done)();
+				});
+			});
 		});
 	});
 }
