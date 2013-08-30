@@ -7,16 +7,8 @@ function MFS(coll, options) {
 	this.encoder = new util.Encoder('-_/*%');
 }
 
-function parsePath(path) {
-	var splitPath = path.split('/');
-	return {
-		fileName: splitPath[splitPath.length - 1],
-		dirPath: splitPath.slice(0, splitPath.length - 1).join('/') + '/'
-	};
-}
-
 MFS.prototype.get = function(path, callback) {
-	var parsedPath = parsePath(path);
+	var parsedPath = util.parsePath(path);
 	this.transaction({
 		path: parsedPath.dirPath,
 		get: [parsedPath.fileName]
@@ -36,7 +28,7 @@ MFS.prototype.createMappingActions = function(action, path, content, mappings) {
 }
 
 MFS.prototype.put = function(path, content, callback) {
-	var parsedPath = parsePath(path);
+	var parsedPath = util.parsePath(path);
 	var put = {};
 	put[parsedPath.fileName] = content;
 	var trans = {
@@ -53,7 +45,7 @@ MFS.prototype.ensureParent = function(path, callback) {
 	if(path == '/') {
 		return callback();
 	}
-	var parsed = parsePath(path.substr(0, path.length - 1));
+	var parsed = util.parsePath(path.substr(0, path.length - 1));
 	var proj = {};
 	proj['f.' + parsed.fileName] = 1;
 	var self = this;
@@ -133,7 +125,7 @@ MFS.prototype.getDir = function(path, expandFiles, callback) {
 	}));
 };
 MFS.prototype.remove = function(path, timestamp, callback) {
-	var parsedPath = parsePath(path);
+	var parsedPath = util.parsePath(path);
 	var trans = {path: parsedPath.dirPath, remove: [parsedPath.fileName]};
 	if(timestamp) {
 		trans._ts = timestamp;

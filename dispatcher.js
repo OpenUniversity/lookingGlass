@@ -118,5 +118,25 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 			}
 		}));
 	}
+
+	this.do_map = function(job, callback) {
+		var mapper = job.content.mapping._mapper;
+		if(!mapper) return;
+		if(mapper.substr(0, 5) != 'http:') return;
+		var self = this;
+		util.httpJsonReq('POST', mapper, job.content, util.protect(callback, function(err, status, headers, list) {
+			if(status != 200) throw new Error('Bad status from mapper: ' + status);
+			var actions = [];
+			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
+			for(var i = 0; i < list.length; i++) {
+				var path = util.parsePath(list[0].path);
+				var content = list[0].content;
+				var put = {};
+				put[path.fileName] = content;
+				var trans = {_ts: content._ts, path: path.dirPath, put: put};
+				self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
+			}
+		}));
+	};
 };
 

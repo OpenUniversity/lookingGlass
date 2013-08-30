@@ -35,6 +35,7 @@
      - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
      - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
      - [.start() and .stop()](#dispatcher-start-and-stop)
+     - [mapping](#dispatcher-mapping)
    - [MirrorMapper](#mirrormapper)
 <a name=""></a>
  
@@ -1116,6 +1117,29 @@ util.seq([
 		assert.equal(this.actions[0].content.a, 5);
 		assert.equal(this.actions[0].mapping.m, 1);
 		disp.stop();
+		_();
+	},
+], done)();
+```
+
+<a name="dispatcher-mapping"></a>
+## mapping
+should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers.
+
+```js
+util.seq([
+	function(_) { disp.transaction({
+		path:'/a/b/', 
+		map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+	}, _); },
+	function(_) { setTimeout(_, 200); }, // Let the mapping propagate
+	function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
+	function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
+	function(_) {
+		assert.equal(this.c.length, 1);
+		assert.equal(this.c[0].content.a, 1);
+		assert.equal(this.g.length, 1);
+		assert.equal(this.g[0].content.a, 4);
 		_();
 	},
 ], done)();

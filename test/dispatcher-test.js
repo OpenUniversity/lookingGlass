@@ -200,7 +200,40 @@ describe('Dispatcher', function() {
 					_();
 				},
 			], done)();
-			
+		});
+	});
+	describe('mapping', function() {
+		var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
+		var mapper = new MirrorMapper(12345);
+		beforeEach(function(done) {
+			util.seq([
+				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
+				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
+				function(_) { mapper.start(); _(); },
+				function(_) { disp.start(); setTimeout(_, 30); },
+			], done)();
+		});
+		afterEach(function() {
+			disp.stop();
+			//mapper.stop(done);
+		});
+		it('should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers', function(done) {
+			util.seq([
+				function(_) { disp.transaction({
+					path:'/a/b/', 
+					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+				}, _); },
+				function(_) { setTimeout(_, 200); }, // Let the mapping propagate
+				function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
+				function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
+				function(_) {
+					assert.equal(this.c.length, 1);
+					assert.equal(this.c[0].content.a, 1);
+					assert.equal(this.g.length, 1);
+					assert.equal(this.g[0].content.a, 4);
+					_();
+				},
+			], done)();
 		});
 	});
 });

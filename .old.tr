@@ -68,7 +68,8 @@
     Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided: [2K[0G  ․ Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided
     Dispatcher tock(job, callback(err)) should perform the given job: [2K[0G  ․ Dispatcher tock(job, callback(err)) should perform the given job
     Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them: [2K[0G  ․ Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them
+    Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
-  70 passing (1 seconds)
+  71 passing (1 seconds)
 

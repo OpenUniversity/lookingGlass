@@ -143,7 +143,12 @@ exports.Worker = function(f, interval, maxInstances) {
 			lastTime = (new Date()).getTime();
 			if(!maxInstances || numInstances < maxInstances) {
 				numInstances++;
-				f(function() {numInstances--;});
+				f(function(err) {
+					if(err) {
+						console.error(err + err.stack);
+					}
+					numInstances--;
+				});
 			}
 		}
 	};
@@ -171,8 +176,19 @@ exports.httpJsonReq = function(method, URL, content, callback) {
 			data += chunk;
 		});
 		resp.on('end', exports.protect(function() {
-			callback(undefined, resp.statusCode, resp.headers, JSON.parse(data));
+			if(resp.statusCode >= 400) {
+				callback(new Error('HTTP Error ' + resp.statusCode + ': ' + data));
+			} else {
+				callback(undefined, resp.statusCode, resp.headers, JSON.parse(data));
+			}
 		}));
 	});
 };
 
+exports.parsePath = function(path) {
+	var splitPath = path.split('/');
+	return {
+		fileName: splitPath[splitPath.length - 1],
+		dirPath: splitPath.slice(0, splitPath.length - 1).join('/') + '/'
+	};
+};
