@@ -5,6 +5,7 @@ var immediateTypes = {content:1, dir:1};
 
 exports.Dispatcher = function(storage, tracker, scheduler, options) {
 	options = options || {workerInterval: 10};
+	var waitInterval = options.waitInterval || 50;
 	var worker = new util.Worker(tickTock, options.workerInterval, options.workerMaxInst);
 
 	this.transaction = function(trans, callback) {
@@ -14,10 +15,12 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 		var actionTuid = util.timeUid();
 		var put = {};
 		var retActions = [];
+		var trackerPath = scheduler.getPath();
 		util.seq([
 			function(_) { storage.transaction(trans, _.to('actions')); },
-			function(_) { trackActions(this.actions, trans._ts, undefined, _); },
+			function(_) { trackActions(this.actions, trans._ts, undefined, trackerPath, _); },
 		], callback)();
+		return {path: trackerPath, ts: trans._ts};
 	};
 
 	function selectJob(dir) {
@@ -51,7 +54,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 				_();
 			},
 			function(_) { tracker.transaction({
-				path: scheduler.getPath(), 
+				path: path, 
 				tsCond: this.tsCond, 
 				remove: [this.job.name], 
 				getIfExists: [this.job.name], 
@@ -69,28 +72,32 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 	this.tock = function(job, callback) {
 		var self = this;
 		this['do_' + job.content.type](job, util.protect(callback, function(err, actions) {
-			trackActions(actions, job.content._ts, job, callback);
+			trackActions(actions, job.content.actionTS, job, job.path, callback);
 		}));
 	};
-	function trackActions(actions, ts, job, callback) {
+	function trackActions(actions, ts, job, path, callback) {
 		var actionTuid = util.timeUid();
 		var put = {};
 		var retActions = [];
-		var needsTracking = false;
+		var numActions = 0;
 		for(var i = 0; i < actions.length; i++) {
 			var action = actions[i];
+			action.actionTS = ts;
 			if(immediateTypes[action.type]) {
 				retActions.push(action);
 			} else {
 				put[ts + '-' + actionTuid + '-' + i] = action;
-				needsTracking = true;
+				numActions++;
 			}
 		}
-		var trans = {path: scheduler.getPath(), put: put};
+		var trans = {path: path, put: put};
 		if(job) {
+			numActions--;
 			trans['remove'] = ['^' + job.name];
 		}
-		if(needsTracking) {
+		if(/*numActions != 0 || job*/true) {
+			trans.accum = {};
+			trans.accum['count-' + ts] = numActions;
 			tracker.transaction(trans, util.protect(callback, function() {
 				callback(undefined, retActions);
 			}));
@@ -133,14 +140,27 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 				var content = list[0].content;
 				var put = {};
 				put[path.fileName] = content;
-				var trans = {_ts: content._ts, path: path.dirPath, put: put};
+				var trans = {_ts: job.content._ts, path: path.dirPath, put: put};
 				self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
 			}
 		}));
 	};
 
-	this.wait = function(ts, callback) {
-		callback();
+	this.wait = function(tracking, callback) {
+		var accum = {};
+		var fileName = 'count-' + tracking.ts;
+		accum[fileName] = 0;
+		var self = this;
+		tracker.transaction({path: tracking.path, accum: accum}, util.protect(callback, function(err, actions) {
+			assert.equal(actions.length, 1);
+			if(actions[0].content == 0) {
+				tracker.transaction({path: tracking.path, accumReset: [fileName]}, callback);
+			} else {
+				setTimeout(function() {
+					self.wait(tracking, callback);
+				}, waitInterval);
+			}
+		}));
 	};
 };
 

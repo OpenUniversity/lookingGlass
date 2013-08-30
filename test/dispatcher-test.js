@@ -164,15 +164,18 @@ describe('Dispatcher', function() {
 				// /a/b/e/f and /a/b/e/g
 				function(_) { tracker.transaction({path: thePath, getDir: {expandFiles:1}}, _.to('dir')); },
 				function(_) {
-					assert.equal(this.dir.length, 4); // Two 'dir', two 'content'
 					var dir = {};
-					for(var i = 0; i < 4; i++) {
+					var count = 0;
+					for(var i = 0; i < this.dir.length; i++) {
 						if(this.dir[i].type != 'content') continue;
 						var content = this.dir[i].content;
+						if(typeof(content) != 'object') continue;
+						count++;
 						assert.equal(content.type, 'map');
 						assert.equal(content.mapping.m, 1);
 						dir[content.path] = content.content;
 					}
+					assert.equal(count, 2);
 					assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
 					assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
 					_();
@@ -219,14 +222,14 @@ describe('Dispatcher', function() {
 		});
 		it('should trigger the callback after all work related to this ts has been complete', function(done) {
 			util.seq([
-				function(_) { disp.transaction({
+				function(_) { this.trackMap = disp.transaction({
 					_ts: '01002',
 					path:'/a/b/', 
 					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
 				}, _); },
-				function(_) { disp.wait('01002', _); }, // Let the mapping propagate
-				function(_) { disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
-				function(_) { disp.wait('01003', _); }, // Let the new value get mapped
+				function(_) { disp.wait(this.trackMap, _); }, // Let the mapping propagate
+				function(_) { this.trackPut = disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
+				function(_) { disp.wait(this.trackPut, _); }, // Let the new value get mapped
 				function(_) { disp.transaction({path: '/P/Q/h/', get:['i']}, _.to('i')); },
 				function(_) {
 					assert.equal(this.i.length, 1);

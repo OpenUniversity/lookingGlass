@@ -31,6 +31,7 @@
          - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-getdir)
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-tscond)
          - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-accum)
+         - [accumReset](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-accumreset)
    - [Dispatcher](#dispatcher)
      - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
      - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
@@ -996,6 +997,29 @@ util.seq([
 ], done)();
 ```
 
+<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-actions-accumreset"></a>
+#### accumReset
+should reset the given accumulators, so that subsequent reads receive 0.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/a/b/', accum: {NUM:3, BER:6}}, _); },
+	function(_) { driver.transaction({path: '/a/b/', accumReset: ['NUM']}, _.to('resetActions')); },
+	function(_) { driver.transaction({path: '/a/b/', accum: {NUM:0, BER:0}}, _.to('actionsAfterReset')); },
+	function(_) {
+		assert.equal(this.resetActions.length, 1);
+		assert.equal(this.resetActions[0].path, '/a/b/NUM');
+		assert.equal(this.resetActions[0].content, 3);
+		assert.equal(this.actionsAfterReset.length, 2);
+		assert.equal(this.actionsAfterReset[0].path, '/a/b/NUM');
+		assert.equal(this.actionsAfterReset[0].content, 0);
+		assert.equal(this.actionsAfterReset[1].path, '/a/b/BER');
+		assert.equal(this.actionsAfterReset[1].content, 6);
+		_();
+	},
+], done)();
+```
+
 <a name="dispatcher"></a>
 # Dispatcher
 <a name="dispatcher-transactiontrans-callbackerr-actions"></a>
@@ -1129,15 +1153,18 @@ util.seq([
 	// /a/b/e/f and /a/b/e/g
 	function(_) { tracker.transaction({path: thePath, getDir: {expandFiles:1}}, _.to('dir')); },
 	function(_) {
-		assert.equal(this.dir.length, 4); // Two 'dir', two 'content'
 		var dir = {};
-		for(var i = 0; i < 4; i++) {
+		var count = 0;
+		for(var i = 0; i < this.dir.length; i++) {
 			if(this.dir[i].type != 'content') continue;
 			var content = this.dir[i].content;
+			if(typeof(content) != 'object') continue;
+			count++;
 			assert.equal(content.type, 'map');
 			assert.equal(content.mapping.m, 1);
 			dir[content.path] = content.content;
 		}
+		assert.equal(count, 2);
 		assert.deepEqual(dir['/a/b/e/f'], {a:3, _ts:'01001'});
 		assert.deepEqual(dir['/a/b/e/g'], {a:4, _ts:'01001'});
 		_();

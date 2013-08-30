@@ -405,6 +405,29 @@ MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
 		for(var key in accum) {
 			var field = self.encoder.encode(key);
 			if(!doc.f) continue;
+			var content = 0;
+			if(field in doc.f) {
+				content = doc.f[field];
+			}
+			actions.push({type: 'content', path: path + field, content: content});
+		}
+	};
+};
+
+MFS.prototype.trans_accumReset = function(accumReset, update, fields, ts, query) {
+	if(!update.$unset) {
+		update.$unset = {};
+	}
+	for(var i = 0; i < accumReset.length; i++) {
+		var encKey = this.encoder.encode(accumReset[i]);
+		update.$unset['f.' + encKey] = 0;
+		fields['f.' + encKey] = 1;
+	}
+	var self = this;
+	return function(path, doc, actions) {
+		for(var i = 0; i < accumReset.length; i++) {
+			var field = self.encoder.encode(accumReset[i]);
+			if(!doc.f) continue;
 			if(!(field in doc.f)) continue;
 			var content = doc.f[field];
 			actions.push({type: 'content', path: path + field, content: content});

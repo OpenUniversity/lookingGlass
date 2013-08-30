@@ -255,6 +255,7 @@ function describeStorageDriver(driverContainer) {
 						},
 					], done)();
 				});
+				it('should propagate to future subdirectories');
 				describe('with put', function() {
 					var mappingTS = util.timeUid();
 					before(function(done) {
@@ -523,6 +524,26 @@ function describeStorageDriver(driverContainer) {
 							assert.equal(this.after[0].content, 7);
 							assert.equal(this.after[1].path, '/a/b/ber');
 							assert.equal(this.after[1].content, 4);
+							_();
+						},
+					], done)();
+				});
+			});
+			describe('accumReset', function() {
+				it('should reset the given accumulators, so that subsequent reads receive 0', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/a/b/', accum: {NUM:3, BER:6}}, _); },
+						function(_) { driver.transaction({path: '/a/b/', accumReset: ['NUM']}, _.to('resetActions')); },
+						function(_) { driver.transaction({path: '/a/b/', accum: {NUM:0, BER:0}}, _.to('actionsAfterReset')); },
+						function(_) {
+							assert.equal(this.resetActions.length, 1);
+							assert.equal(this.resetActions[0].path, '/a/b/NUM');
+							assert.equal(this.resetActions[0].content, 3);
+							assert.equal(this.actionsAfterReset.length, 2);
+							assert.equal(this.actionsAfterReset[0].path, '/a/b/NUM');
+							assert.equal(this.actionsAfterReset[0].content, 0);
+							assert.equal(this.actionsAfterReset[1].path, '/a/b/BER');
+							assert.equal(this.actionsAfterReset[1].content, 6);
 							_();
 						},
 					], done)();
