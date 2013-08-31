@@ -8,6 +8,7 @@
        - [.decode(enc)](#util-encoderallowedspecial-decodeenc)
      - [parallel(n, callback)](#util-paralleln-callback)
      - [Worker](#util-worker)
+   - [jsMapper](#jsmapper)
    - [MongoFS](#mongofs)
      - [.get(path, callback(err, file))](#mongofs-getpath-callbackerr-file)
      - [.put(path, file, callback(err))](#mongofs-putpath-file-callbackerr)
@@ -217,6 +218,71 @@ setTimeout(util.protect(done, function() {
 	assert(n >= 3 && n <= 5, 'n should be 4 +- 1 (' + n + ')');
 	done();
 }), 100);
+```
+
+<a name="jsmapper"></a>
+# jsMapper
+should receive a javascript function as the mapping's "func" field and call it with the entry as its "this".
+
+```js
+mappingFunction = function() {
+	this.beenHere = true;
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+	type: 'map',
+	mapping: mapping,
+	content: {foo: 'bar'},
+	path: '/a/b/c',
+}, function(err, list) {
+	assert(mapping.beenHere, 'indication that the mapping function has been executed');
+	done();
+});
+```
+
+should pass the function the path and the content to be mapped.
+
+```js
+mappingFunction = function(path, content) {
+	this.path = path;
+	this.content = content;
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+	type: 'map',
+	mapping: mapping,
+	content: {foo: 'bar'},
+	path: '/a/b/c',
+}, function(err, list) {
+	assert.equal(mapping.path, '/a/b/c');
+	assert.equal(mapping.content.foo, 'bar');
+	done();
+});
+```
+
+should provide an emit() function that contributes content actions to the output.
+
+```js
+mappingFunction = function(path, content) {
+	emit('/foo/bar', {foo: 'bar'});
+	emit('/a/b/c/d', {abc: 123});
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+	type: 'map',
+	mapping: mapping,
+	content: {foo: 'bar'},
+	path: '/a/b/c',
+}, function(err, list) {
+	assert.equal(list.length, 2);
+	assert.equal(list[0].type, 'content');
+	assert.equal(list[0].path, '/foo/bar');
+	assert.equal(list[0].content.foo, 'bar');
+	assert.equal(list[1].type, 'content');
+	assert.equal(list[1].path, '/a/b/c/d');
+	assert.equal(list[1].content.abc, 123);
+	done();
+});
 ```
 
 <a name="mongofs"></a>
@@ -1303,6 +1369,60 @@ util.seq([
 	function(_) { disp.transaction({path: '/P/Q/', getIfExists:['c']}, _.to('c')); },
 	function(_) {
 		assert.equal(this.c.length, 0); // 'c' does not exist anymore
+		_();
+	},
+], done)();
+```
+
+should support the javascript mapper.
+
+```js
+util.seq([
+	function(_) { this.mapTracker = disp.transaction({
+		path:'/text/',
+		map:{
+			_mapper: 'javascript',
+			func: (function(path, content) {
+				if(content[this.field]) {
+					var text = content[this.field];
+					var hash = encodeURIComponent(path);
+					var words = text.split(/[ \t]+/);
+					for(var i = 0; i < words.length; i++) {
+						emit('/searchIdx/' + words[i] + '/' + hash, {_link: path});
+					}
+				}
+			}).toString(),
+			field: 'desc',
+		},
+	}, _); },
+	function(_) { this.putTracker = disp.transaction({path: '/text/', put:{
+		a: {desc: 'the first letter in the alphabet'},
+		b: {desc: 'the second letter in the alphabet'},
+		z: {desc: 'the last letter in the alphabet'},
+	}}, _); },
+	function(_) { disp.wait(this.mapTracker, _); },
+	function(_) { disp.wait(this.putTracker, _); },
+	function(_) { disp.transaction({path:'/searchIdx/first/', getDir:{expandFiles:1}}, _.to('first')); },
+	function(_) {
+		for(var i = 0; i < this.first.length; i++) {
+			if(this.first[i].type == 'content') {
+				assert.equal(this.first[0].content._link, '/text/a');
+			}
+		}
+		_();
+	},
+	function(_) { disp.transaction({path:'/searchIdx/alphabet/', getDir:{}}, _.to('alphabet')); },
+	function(_) {
+		assert.equal(this.alphabet.length, 3); // All three files
+		_();
+	},
+	function(_) { this.removeTracker = disp.transaction({path: '/text/', remove: ['a']}, _); },
+	function(_) { disp.wait(this.removeTracker, _); },
+	function(_) { disp.transaction({path:'/searchIdx/first/', getDir:{}}, _.to('first')); },
+	function(_) { disp.transaction({path:'/searchIdx/alphabet/', getDir:{}}, _.to('alphabet')); },
+	function(_) {
+		assert.equal(this.first.length, 0); // "a" has been deleted
+		assert.equal(this.alphabet.length, 2);
 		_();
 	},
 ], done)();

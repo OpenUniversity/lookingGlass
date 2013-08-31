@@ -27,11 +27,13 @@ describe('Dispatcher', function() {
 	var MapServer = require('../mapServer.js').MapServer;
 	var server = new MapServer(12345, {
 		'/mirror': require('../mirrorMapper.js'),
+		'/javascript': require('../jsMapper.js'),
 		_default: emptyMapping,
 	});
 	var mappers = {
 		_default: require('../httpMapper.js'),
 		mirror: require('../mirrorMapper.js'),
+		javascript: require('../jsMapper.js'),
 	};
 	before(function(done) {
 		util.seq([
@@ -322,6 +324,57 @@ describe('Dispatcher', function() {
 				function(_) { disp.transaction({path: '/P/Q/', getIfExists:['c']}, _.to('c')); },
 				function(_) {
 					assert.equal(this.c.length, 0); // 'c' does not exist anymore
+					_();
+				},
+			], done)();
+		});
+		it('should support the javascript mapper', function(done) {
+			util.seq([
+				function(_) { this.mapTracker = disp.transaction({
+					path:'/text/',
+					map:{
+						_mapper: 'javascript',
+						func: (function(path, content) {
+							if(content[this.field]) {
+								var text = content[this.field];
+								var hash = encodeURIComponent(path);
+								var words = text.split(/[ \t]+/);
+								for(var i = 0; i < words.length; i++) {
+									emit('/searchIdx/' + words[i] + '/' + hash, {_link: path});
+								}
+							}
+						}).toString(),
+						field: 'desc',
+					},
+				}, _); },
+				function(_) { this.putTracker = disp.transaction({path: '/text/', put:{
+					a: {desc: 'the first letter in the alphabet'},
+					b: {desc: 'the second letter in the alphabet'},
+					z: {desc: 'the last letter in the alphabet'},
+				}}, _); },
+				function(_) { disp.wait(this.mapTracker, _); },
+				function(_) { disp.wait(this.putTracker, _); },
+				function(_) { disp.transaction({path:'/searchIdx/first/', getDir:{expandFiles:1}}, _.to('first')); },
+				function(_) {
+					for(var i = 0; i < this.first.length; i++) {
+						if(this.first[i].type == 'content') {
+							assert.equal(this.first[0].content._link, '/text/a');
+						}
+					}
+					_();
+				},
+				function(_) { disp.transaction({path:'/searchIdx/alphabet/', getDir:{}}, _.to('alphabet')); },
+				function(_) {
+					assert.equal(this.alphabet.length, 3); // All three files
+					_();
+				},
+				function(_) { this.removeTracker = disp.transaction({path: '/text/', remove: ['a']}, _); },
+				function(_) { disp.wait(this.removeTracker, _); },
+				function(_) { disp.transaction({path:'/searchIdx/first/', getDir:{}}, _.to('first')); },
+				function(_) { disp.transaction({path:'/searchIdx/alphabet/', getDir:{}}, _.to('alphabet')); },
+				function(_) {
+					assert.equal(this.first.length, 0); // "a" has been deleted
+					assert.equal(this.alphabet.length, 2);
 					_();
 				},
 			], done)();

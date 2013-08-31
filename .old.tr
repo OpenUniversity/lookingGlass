@@ -13,6 +13,9 @@
     util parallel(n, callback) should call the callback immediately with an error if an error is given to the parallel callback: [2K[0G  ․ util parallel(n, callback) should call the callback immediately with an error if an error is given to the parallel callback
     util Worker should call a given function iteratively, in given intervals, until stopped: [2K[0G  ․ util Worker should call a given function iteratively, in given intervals, until stopped
     util Worker should assure that no more than a given number of instances of the function are running at any given time: [2K[0G  ․ util Worker should assure that no more than a given number of instances of the function are running at any given time
+    jsMapper should receive a javascript function as the mapping's "func" field and call it with the entry as its "this": [2K[0G  ․ jsMapper should receive a javascript function as the mapping's "func" field and call it with the entry as its "this"
+    jsMapper should pass the function the path and the content to be mapped: [2K[0G  ․ jsMapper should pass the function the path and the content to be mapped
+    jsMapper should provide an emit() function that contributes content actions to the output: [2K[0G  ․ jsMapper should provide an emit() function that contributes content actions to the output
     MongoFS should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS should retrieve the value with the highest _ts value
     MongoFS should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS should support any kind of characters in paths, with the exception that slash (/) and star (*)
     MongoFS .get(path, callback(err, file)) should retrieve the value of a file: [2K[0G  ․ MongoFS .get(path, callback(err, file)) should retrieve the value of a file
@@ -76,7 +79,8 @@
     Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
     Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data
     Dispatcher mapping should handle unmap operations by removing mirrored data: [2K[0G  ․ Dispatcher mapping should handle unmap operations by removing mirrored data
+    Dispatcher mapping should support the javascript mapper: [2K[0G  ․ Dispatcher mapping should support the javascript mapper
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
-  78 passing (1 seconds)
+  82 passing (2 seconds)
 

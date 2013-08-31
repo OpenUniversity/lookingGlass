@@ -144,8 +144,8 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 			var actions = [];
 			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
 			for(var i = 0; i < list.length; i++) {
-				var path = util.parsePath(list[0].path);
-				var content = list[0].content;
+				var path = util.parsePath(list[i].path);
+				var content = list[i].content;
 				var put = {};
 				put[path.fileName] = content;
 				var trans = {_ts: job.content._ts, path: path.dirPath, put: put};
@@ -170,7 +170,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 			var actions = [];
 			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
 			for(var i = 0; i < list.length; i++) {
-				var path = util.parsePath(list[0].path);
+				var path = util.parsePath(list[i].path);
 				var trans = {_ts: job.content._ts, path: path.dirPath, remove: [path.fileName]};
 				self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
 			}
@@ -180,13 +180,13 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 	this.wait = function(tracking, callback, waitInterval) {
 		waitInterval = waitInterval || initialWaitInterval;
 		var accum = {};
-		var fileName = 'count-' + tracking.ts;
-		accum[fileName] = 0;
+		var counterName = 'count-' + tracking.ts;
+		accum[counterName] = 0;
 		var self = this;
 		tracker.transaction({path: tracking.path, accum: accum}, util.protect(callback, function(err, actions) {
 			assert.equal(actions.length, 1);
 			if(actions[0].content == 0) {
-				tracker.transaction({path: tracking.path, accumReset: [fileName]}, callback);
+				tracker.transaction({path: tracking.path, accumReset: [counterName]}, callback);
 			} else {
 				setTimeout(function() {
 					self.wait(tracking, callback, Math.min(waitInterval * waitIntervalGrowthFactor, maxWaitInterval));
