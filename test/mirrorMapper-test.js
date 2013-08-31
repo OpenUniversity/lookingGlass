@@ -2,11 +2,10 @@ var util = require('../util.js');
 var assert = require('assert');
 var http = require('http');
 var MapServer = require('../mapServer.js').MapServer;
-var mapper = require('../mirrorMapper.js');
 
 var port = 23445;
 
-var mapper = new MapServer(port, mapper);
+var mapper = new MapServer(port, {'/mirror': require('../mirrorMapper.js')});
 before(function(done) {
 	mapper.start();
 	setTimeout(done, 20);
@@ -19,7 +18,7 @@ after(function() {
 describe('MirrorMapper', function() {
 	it('should returns content objects identical to the source, except changing the path', function(done) {
 		util.seq([
-			function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/', {
+			function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/mirror', {
 				type: 'map',
 				mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
 				path: '/a/b/c/d',

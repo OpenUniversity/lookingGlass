@@ -1222,7 +1222,7 @@ util.seq([
 	function(_) { this.trackMap = disp.transaction({
 		_ts: '01002',
 		path:'/a/b/', 
-		map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+		map:{_mapper: 'http://localhost:12345/mirror', origPath: '/a/b/', newPath: '/P/Q/'},
 	}, _); },
 	function(_) { disp.wait(this.trackMap, _); }, // Let the mapping propagate
 	function(_) { this.trackPut = disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
@@ -1244,7 +1244,7 @@ should handle map operations with _mapping fields containing HTTP URLs by redire
 util.seq([
 	function(_) { this.tracker = disp.transaction({
 		path:'/a/b/', 
-		map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+		map:{_mapper: 'http://localhost:12345/mirror', origPath: '/a/b/', newPath: '/P/Q/'},
 	}, _); },
 	function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
 	function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
@@ -1286,7 +1286,7 @@ should returns content objects identical to the source, except changing the path
 
 ```js
 util.seq([
-	function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/', {
+	function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/mirror', {
 		type: 'map',
 		mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
 		path: '/a/b/c/d',

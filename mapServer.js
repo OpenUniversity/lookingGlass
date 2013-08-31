@@ -2,7 +2,7 @@ var http = require('http');
 var util = require('./util.js');
 
 
-exports.MapServer = function(port, mapper) {
+exports.MapServer = function(port, mappers) {
 	var server = http.createServer(function (req, res) {
 		var reqContent = '';
 		util.seq([
@@ -14,8 +14,13 @@ exports.MapServer = function(port, mapper) {
 			function(_) { 
 				res.writeHead(200, {'Content-Type': 'application/json'});
 				var reqJson = JSON.parse(reqContent);
-				res.end(JSON.stringify(calcResponse(reqJson)));
+				if(mappers[req.url]) {
+					mappers[req.url].map(reqJson, _.to('list'));
+				} else {
+					mappers._default.map(reqJson, _.to('list'));
+				}
 			},
+			function(_) { res.end(JSON.stringify(this.list)); }
 		], function(err) {
 			res.writeHead(500, {'Content-Type': 'text/plain'});
 			res.end(err.toString());

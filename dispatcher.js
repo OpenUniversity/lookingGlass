@@ -138,6 +138,9 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 		if(!mapper) return callback(undefined, []);
 		var self = this;
 		mapper.map(job.content, util.protect(callback, function(err, list) {
+			if(list.length == 0) {
+				return callback(undefined, []);
+			}
 			var actions = [];
 			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
 			for(var i = 0; i < list.length; i++) {

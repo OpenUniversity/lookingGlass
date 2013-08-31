@@ -11,6 +11,12 @@ function DummyScheduler(path) {
 var thePath = '/some/path/';
 var scheduler = new DummyScheduler(thePath);
 
+var emptyMapping = {
+	map: function(obj, callback) {
+		callback(undefined, []);
+	}
+};
+
 describe('Dispatcher', function() {
 	var storage;
 	var tracker;
@@ -18,8 +24,11 @@ describe('Dispatcher', function() {
 	var trackerColl;
 	var disp;
 	var driverContainer = {};
-	var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
-	var mapper = new MirrorMapper(12345);
+	var MapServer = require('../mapServer.js').MapServer;
+	var server = new MapServer(12345, {
+		'/mirror': require('../mirrorMapper.js'),
+		_default: emptyMapping,
+	});
 	var mappers = {
 		_default: require('../httpMapper.js'),
 		mirror: require('../mirrorMapper.js'),
@@ -216,20 +225,20 @@ describe('Dispatcher', function() {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
 				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
-				function(_) { mapper.start(); _(); },
-				function(_) { disp.start(); setTimeout(_, 30); }, // Allow the mapper to start
+				function(_) { server.start(); _(); },
+				function(_) { disp.start(); setTimeout(_, 30); }, // Allow the server to start
 			], done)();
 		});
 		afterEach(function() {
 			disp.stop();
-			mapper.stop(function(){});
+			server.stop(function(){});
 		});
 		it('should trigger the callback after all work related to this ts has been complete', function(done) {
 			util.seq([
 				function(_) { this.trackMap = disp.transaction({
 					_ts: '01002',
 					path:'/a/b/', 
-					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+					map:{_mapper: 'http://localhost:12345/mirror', origPath: '/a/b/', newPath: '/P/Q/'},
 				}, _); },
 				function(_) { disp.wait(this.trackMap, _); }, // Let the mapping propagate
 				function(_) { this.trackPut = disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
@@ -248,19 +257,19 @@ describe('Dispatcher', function() {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
 				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
-				function(_) { mapper.start(); _(); },
+				function(_) { server.start(); _(); },
 				function(_) { disp.start(); setTimeout(_, 30); }, // Allow the mapper to start
 			], done)();
 		});
 		afterEach(function() {
 			disp.stop();
-			mapper.stop(function() {});
+			server.stop(function() {});
 		});
 		it('should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers', function(done) {
 			util.seq([
 				function(_) { this.tracker = disp.transaction({
 					path:'/a/b/', 
-					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+					map:{_mapper: 'http://localhost:12345/mirror', origPath: '/a/b/', newPath: '/P/Q/'},
 				}, _); },
 				function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
 				function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
