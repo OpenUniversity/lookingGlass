@@ -207,7 +207,7 @@ describe('Dispatcher', function() {
 			], done)();
 		});
 	});
-	describe.skip('.wait(ts, callback(err))', function() {
+	describe('.wait(ts, callback(err))', function() {
 		beforeEach(function(done) {
 			util.seq([
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },

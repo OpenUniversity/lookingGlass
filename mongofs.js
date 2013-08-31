@@ -43,36 +43,27 @@ MFS.prototype.put = function(path, content, callback) {
 
 MFS.prototype.ensureParent = function(path, callback) {
 	if(path == '/') {
-		return callback();
+		return callback(undefined, []);
 	}
 	var parsed = util.parsePath(path.substr(0, path.length - 1));
 	var proj = {};
 	proj['f.' + parsed.fileName] = 1;
+	proj.m = 1;
+	var update = {$set: {}};
+	update.$set['f.' + parsed.fileName + '/'] = 1;
 	var self = this;
-	this.coll.find({_id: parsed.dirPath}, proj).toArray(util.protect(callback, function(err, docs) {
-		if(docs.length == 0) {
-			// Parent directory does not exist.
-			// Create and ensure parent.
-			var doc = {_id: parsed.dirPath, f:{}};
-			doc.f[parsed.fileName + '/'] = 1;
-			self.coll.insert(doc, function(err) {
-				if(err) {
-					return callback(err);
+	this.coll.findAndModify({_id: parsed.dirPath}, {_id: 1}, update, {upsert: true, fields: proj}, util.protect(callback, function(err, doc) {
+		var actions = [];
+		if(doc) {
+			// parent directory exists
+			if(doc.m) {
+				for(var key in doc.m) {
+					actions.push({type: 'tramp', map: doc.m[key], path: path, _ts: key});
 				}
-				self.ensureParent(parsed.dirPath, callback);
-			});
-		} else {
-			if(!docs[0].f || !docs[0].f[parsed.fileName]) {
-				// Parent dir exists, but does not point to the child
-				// Update it.
-				var update = {};
-				update['f.' + parsed.fileName + '/'] = 1;
-				self.coll.update({_id: parsed.dirPath}, {$set: update}, {safe: true}, callback);
-			} else {
-				// All is well.
-				// Nothing to do
-				callback();
 			}
+			callback(undefined, actions);
+		} else {
+			self.ensureParent(parsed.dirPath, callback);
 		}
 	}));
 };
@@ -183,7 +174,9 @@ MFS.prototype.transaction = function(trans, callback) {
 			}
 		}
 		if(dirDoesNotExist) {
-			self.ensureParent(trans.path, util.protect(callback, function() { callback(undefined, actions); }));
+			self.ensureParent(trans.path, util.protect(callback, function(err, parentActions) {
+				callback(undefined, parentActions.concat(actions)); 
+			}));
 		} else {
 			callback(undefined, actions);
 		}

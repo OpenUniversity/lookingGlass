@@ -255,7 +255,22 @@ function describeStorageDriver(driverContainer) {
 						},
 					], done)();
 				});
-				it('should propagate to future subdirectories');
+				it('should propagate to future subdirectories', function(done) {
+					util.seq([
+						function(_) { driver.transaction({path: '/QWe/rty/', map: {foo: 'bar'}}, _.to('rawActions1')); },
+						function(_) { trampoline(driver, this.rawActions1, _.to('actions1')); },
+						function(_) { driver.transaction({path: '/QWe/rty/abc/', put: {uio: {baz: 'bat'}}}, _.to('rawActions2')); },
+						function(_) { trampoline(driver, this.rawActions2, _.to('actions2')); },
+						function(_) {
+							var actions = this.actions1.concat(this.actions2);
+							assert.equal(actions.length, 1);
+							assert.equal(actions[0].type, 'map');
+							assert.equal(actions[0].mapping.foo, 'bar');
+							assert.equal(actions[0].path, '/QWe/rty/abc/uio');
+							done();
+						},
+					], done)();
+				});
 				describe('with put', function() {
 					var mappingTS = util.timeUid();
 					before(function(done) {

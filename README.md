@@ -730,6 +730,25 @@ util.seq([
 ], done)();
 ```
 
+should propagate to future subdirectories.
+
+```js
+util.seq([
+	function(_) { driver.transaction({path: '/QWe/rty/', map: {foo: 'bar'}}, _.to('rawActions1')); },
+	function(_) { trampoline(driver, this.rawActions1, _.to('actions1')); },
+	function(_) { driver.transaction({path: '/QWe/rty/abc/', put: {uio: {baz: 'bat'}}}, _.to('rawActions2')); },
+	function(_) { trampoline(driver, this.rawActions2, _.to('actions2')); },
+	function(_) {
+		var actions = this.actions1.concat(this.actions2);
+		assert.equal(actions.length, 1);
+		assert.equal(actions[0].type, 'map');
+		assert.equal(actions[0].mapping.foo, 'bar');
+		assert.equal(actions[0].path, '/QWe/rty/abc/uio');
+		done();
+	},
+], done)();
+```
+
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-actions-map-with-put"></a>
 ##### with put
 should cause subsequent puts emit the mapping for the new object.
@@ -1196,6 +1215,27 @@ util.seq([
 
 <a name="dispatcher-waitts-callbackerr"></a>
 ## .wait(ts, callback(err))
+should trigger the callback after all work related to this ts has been complete.
+
+```js
+util.seq([
+	function(_) { this.trackMap = disp.transaction({
+		_ts: '01002',
+		path:'/a/b/', 
+		map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+	}, _); },
+	function(_) { disp.wait(this.trackMap, _); }, // Let the mapping propagate
+	function(_) { this.trackPut = disp.transaction({_ts: '01003', path:'/a/b/h/', put:{i:{a:5}}}, _); },
+	function(_) { disp.wait(this.trackPut, _); }, // Let the new value get mapped
+	function(_) { disp.transaction({path: '/P/Q/h/', get:['i']}, _.to('i')); },
+	function(_) {
+		assert.equal(this.i.length, 1);
+		assert.equal(this.i[0].content.a, 5);
+		_();
+	},
+], done)();
+```
+
 <a name="dispatcher-mapping"></a>
 ## mapping
 should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers.

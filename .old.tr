@@ -46,7 +46,7 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions including the mapping for all files in the directory: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions including the mapping for all files in the directory
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should work whether or not the directory already exists: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should work whether or not the directory already exists
-  - MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should propagate to future subdirectories
+    MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should propagate to future subdirectories: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map should propagate to future subdirectories
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with put should cause subsequent puts emit the mapping for the new object: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with put should cause subsequent puts emit the mapping for the new object
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with put should cause puts that overrides an existing value provide mapping for the new value and unmapping for the old one: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with put should cause puts that overrides an existing value provide mapping for the new value and unmapping for the old one
     MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with remove should emit unmapping of the removed content: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, actions)) map with remove should emit unmapping of the removed content
@@ -72,10 +72,9 @@
     Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided: [2K[0G  ․ Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided
     Dispatcher tock(job, callback(err)) should perform the given job: [2K[0G  ․ Dispatcher tock(job, callback(err)) should perform the given job
     Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them: [2K[0G  ․ Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them
-  - Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete
+    Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete: [2K[0G  ․ Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete
     Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
-  74 passing (1 seconds)
-  2 pending
+  76 passing (1 seconds)
 
