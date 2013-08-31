@@ -1280,6 +1280,34 @@ util.seq([
 ], done)();
 ```
 
+should handle unmap operations by removing mirrored data.
+
+```js
+util.seq([
+	function(_) { this.tracker = disp.transaction({
+		path:'/a/b/', 
+		map:{_mapper: 'mirror', origPath: '/a/b/', newPath: '/P/Q/'},
+	}, _); },
+	function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
+	function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
+	function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
+	function(_) {
+		assert.equal(this.c.length, 1);
+		assert.equal(this.c[0].content.a, 1);
+		assert.equal(this.g.length, 1);
+		assert.equal(this.g[0].content.a, 4);
+		_();
+	},
+	function(_) { this.track = disp.transaction({path: '/a/b/', remove:['c']}, _.to('c')); },
+	function(_) { disp.wait(this.track, _); },
+	function(_) { disp.transaction({path: '/P/Q/', getIfExists:['c']}, _.to('c')); },
+	function(_) {
+		assert.equal(this.c.length, 0); // 'c' does not exist anymore
+		_();
+	},
+], done)();
+```
+
 <a name="mirrormapper"></a>
 # MirrorMapper
 should returns content objects identical to the source, except changing the path.

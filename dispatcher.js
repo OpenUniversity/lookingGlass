@@ -154,6 +154,29 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 		}));
 	};
 
+	this.do_unmap = function(job, callback) {
+		var mapperName = job.content.mapping._mapper;
+		if(!mapperName) return callback(undefined, []);
+		var mapper = mappers[mapperName];
+		if(!mapper) {
+			mapper = mappers._default;
+		}
+		if(!mapper) return callback(undefined, []);
+		var self = this;
+		mapper.map(job.content, util.protect(callback, function(err, list) {
+			if(list.length == 0) {
+				return callback(undefined, []);
+			}
+			var actions = [];
+			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
+			for(var i = 0; i < list.length; i++) {
+				var path = util.parsePath(list[0].path);
+				var trans = {_ts: job.content._ts, path: path.dirPath, remove: [path.fileName]};
+				self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
+			}
+		}));
+	};
+
 	this.wait = function(tracking, callback, waitInterval) {
 		waitInterval = waitInterval || initialWaitInterval;
 		var accum = {};
