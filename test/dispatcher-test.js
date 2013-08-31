@@ -192,8 +192,8 @@ describe('Dispatcher', function() {
 		it('should cause the dispatcher to automatically take tasks and execute them', function(done) {
 			disp.start();
 			util.seq([
-				function(_) { disp.transaction({path: '/a/b/', map: {m:1}}, _); },
-				function(_) { setTimeout(_, 100); }, // should be plenty of time to propagate the mapping
+				function(_) { this.tracking = disp.transaction({path: '/a/b/', map: {m:1}}, _); },
+				function(_) { disp.wait(this.tracking, _); },
 				function(_) { storage.transaction({path:'/a/b/e/', put:{h:{a:5}}}, _.to('actions')); },
 				function(_) {
 					assert.equal(this.actions.length, 1);
@@ -213,7 +213,7 @@ describe('Dispatcher', function() {
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
 				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
 				function(_) { mapper.start(); _(); },
-				function(_) { disp.start(); setTimeout(_, 30); },
+				function(_) { disp.start(); setTimeout(_, 30); }, // Allow the mapper to start
 			], done)();
 		});
 		afterEach(function() {
@@ -245,7 +245,7 @@ describe('Dispatcher', function() {
 				function(_) { disp.transaction({_ts: '01000', path:'/a/b/', put:{c:{a:1}, d:{a:2}}}, _); },
 				function(_) { disp.transaction({_ts: '01001', path:'/a/b/e/', put:{f:{a:3}, g:{a:4}}}, _); },
 				function(_) { mapper.start(); _(); },
-				function(_) { disp.start(); setTimeout(_, 30); },
+				function(_) { disp.start(); setTimeout(_, 30); }, // Allow the mapper to start
 			], done)();
 		});
 		afterEach(function() {
@@ -254,11 +254,11 @@ describe('Dispatcher', function() {
 		});
 		it('should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers', function(done) {
 			util.seq([
-				function(_) { disp.transaction({
+				function(_) { this.tracker = disp.transaction({
 					path:'/a/b/', 
 					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
 				}, _); },
-				function(_) { setTimeout(_, 200); }, // Let the mapping propagate
+				function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
 				function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
 				function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
 				function(_) {

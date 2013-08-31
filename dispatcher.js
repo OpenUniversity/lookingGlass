@@ -5,7 +5,9 @@ var immediateTypes = {content:1, dir:1};
 
 exports.Dispatcher = function(storage, tracker, scheduler, options) {
 	options = options || {workerInterval: 10};
-	var waitInterval = options.waitInterval || 50;
+	var initialWaitInterval = options.initialWaitInterval || 10;
+	var maxWaitInterval = options.maxWaitInterval || initialWaitInterval * 100;
+	var waitIntervalGrowthFactor = options.waitIntervalGrowthFactor || 1.2;
 	var worker = new util.Worker(tickTock, options.workerInterval, options.workerMaxInst);
 
 	this.transaction = function(trans, callback) {
@@ -128,8 +130,8 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 
 	this.do_map = function(job, callback) {
 		var mapper = job.content.mapping._mapper;
-		if(!mapper) return;
-		if(mapper.substr(0, 5) != 'http:') return;
+		if(!mapper) return callback(undefined, []);
+		if(mapper.substr(0, 5) != 'http:') return callback(undefined, []);
 		var self = this;
 		util.httpJsonReq('POST', mapper, job.content, util.protect(callback, function(err, status, headers, list) {
 			if(status != 200) throw new Error('Bad status from mapper: ' + status);
@@ -146,7 +148,8 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 		}));
 	};
 
-	this.wait = function(tracking, callback) {
+	this.wait = function(tracking, callback, waitInterval) {
+		waitInterval = waitInterval || initialWaitInterval;
 		var accum = {};
 		var fileName = 'count-' + tracking.ts;
 		accum[fileName] = 0;
@@ -157,7 +160,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 				tracker.transaction({path: tracking.path, accumReset: [fileName]}, callback);
 			} else {
 				setTimeout(function() {
-					self.wait(tracking, callback);
+					self.wait(tracking, callback, Math.min(waitInterval * waitIntervalGrowthFactor, maxWaitInterval));
 				}, waitInterval);
 			}
 		}));
