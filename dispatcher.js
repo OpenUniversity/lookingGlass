@@ -3,7 +3,7 @@ var assert = require('assert');
 
 var immediateTypes = {content:1, dir:1};
 
-exports.Dispatcher = function(storage, tracker, scheduler, options) {
+exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
 	options = options || {workerInterval: 10};
 	var initialWaitInterval = options.initialWaitInterval || 10;
 	var maxWaitInterval = options.maxWaitInterval || initialWaitInterval * 100;
@@ -129,12 +129,15 @@ exports.Dispatcher = function(storage, tracker, scheduler, options) {
 	}
 
 	this.do_map = function(job, callback) {
-		var mapper = job.content.mapping._mapper;
+		var mapperName = job.content.mapping._mapper;
+		if(!mapperName) return callback(undefined, []);
+		var mapper = mappers[mapperName];
+		if(!mapper) {
+			mapper = mappers._default;
+		}
 		if(!mapper) return callback(undefined, []);
-		if(mapper.substr(0, 5) != 'http:') return callback(undefined, []);
 		var self = this;
-		util.httpJsonReq('POST', mapper, job.content, util.protect(callback, function(err, status, headers, list) {
-			if(status != 200) throw new Error('Bad status from mapper: ' + status);
+		mapper.map(job.content, util.protect(callback, function(err, list) {
 			var actions = [];
 			var cb = util.parallel(list.length, function() {callback(undefined, actions);});
 			for(var i = 0; i < list.length; i++) {

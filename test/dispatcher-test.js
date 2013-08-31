@@ -20,6 +20,10 @@ describe('Dispatcher', function() {
 	var driverContainer = {};
 	var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
 	var mapper = new MirrorMapper(12345);
+	var mappers = {
+		_default: require('../httpMapper.js'),
+		mirror: require('../mirrorMapper.js'),
+	};
 	before(function(done) {
 		util.seq([
 			function(_) { require("mongodb").MongoClient.connect('mongodb://127.0.0.1:27017/test', _.to('db')); },
@@ -28,7 +32,7 @@ describe('Dispatcher', function() {
 				trackerColl = this.db.collection('tracker');
 				storage = new MFS(storageColl, {maxVers: 2});
 				tracker = new MFS(trackerColl, {maxVers: 2});
-				disp = new Dispatcher(storage, tracker, scheduler);
+				disp = new Dispatcher(storage, tracker, scheduler, mappers);
 				_();
 			},
 			function(_) { storageColl.remove({}, _); },
@@ -257,6 +261,24 @@ describe('Dispatcher', function() {
 				function(_) { this.tracker = disp.transaction({
 					path:'/a/b/', 
 					map:{_mapper: 'http://localhost:12345/', origPath: '/a/b/', newPath: '/P/Q/'},
+				}, _); },
+				function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
+				function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
+				function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
+				function(_) {
+					assert.equal(this.c.length, 1);
+					assert.equal(this.c[0].content.a, 1);
+					assert.equal(this.g.length, 1);
+					assert.equal(this.g[0].content.a, 4);
+					_();
+				},
+			], done)();
+		});
+		it('should handle map operations with _mapping="mirror" by mirrorring data', function(done) {
+			util.seq([
+				function(_) { this.tracker = disp.transaction({
+					path:'/a/b/', 
+					map:{_mapper: 'mirror', origPath: '/a/b/', newPath: '/P/Q/'},
 				}, _); },
 				function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
 				function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },

@@ -74,7 +74,8 @@
     Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them: [2K[0G  ․ Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them
     Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete: [2K[0G  ․ Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete
     Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
+    Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
-  76 passing (1 seconds)
+  77 passing (1 seconds)
 

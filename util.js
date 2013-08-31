@@ -145,7 +145,7 @@ exports.Worker = function(f, interval, maxInstances) {
 				numInstances++;
 				f(function(err) {
 					if(err) {
-						console.error(err + err.stack);
+						console.error(err.stack);
 					}
 					numInstances--;
 				});

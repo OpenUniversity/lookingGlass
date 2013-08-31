@@ -1,11 +1,12 @@
 var util = require('../util.js');
 var assert = require('assert');
 var http = require('http');
-var MirrorMapper = require('../mirrorMapper.js').MirrorMapper;
+var MapServer = require('../mapServer.js').MapServer;
+var mapper = require('../mirrorMapper.js');
 
 var port = 23445;
 
-var mapper = new MirrorMapper(port);
+var mapper = new MapServer(port, mapper);
 before(function(done) {
 	mapper.start();
 	setTimeout(done, 20);

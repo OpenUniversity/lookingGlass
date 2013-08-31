@@ -1259,6 +1259,27 @@ util.seq([
 ], done)();
 ```
 
+should handle map operations with _mapping="mirror" by mirrorring data.
+
+```js
+util.seq([
+	function(_) { this.tracker = disp.transaction({
+		path:'/a/b/', 
+		map:{_mapper: 'mirror', origPath: '/a/b/', newPath: '/P/Q/'},
+	}, _); },
+	function(_) { disp.wait(this.tracker, _); }, // Let the mapping propagate
+	function(_) { disp.transaction({path: '/P/Q/', get:['c']}, _.to('c')); },
+	function(_) { disp.transaction({path: '/P/Q/e/', get:['g']}, _.to('g')); },
+	function(_) {
+		assert.equal(this.c.length, 1);
+		assert.equal(this.c[0].content.a, 1);
+		assert.equal(this.g.length, 1);
+		assert.equal(this.g[0].content.a, 4);
+		_();
+	},
+], done)();
+```
+
 <a name="mirrormapper"></a>
 # MirrorMapper
 should returns content objects identical to the source, except changing the path.
