@@ -37,6 +37,7 @@
      - [.wait(ts, callback(err))](#dispatcher-waitts-callbackerr)
      - [mapping](#dispatcher-mapping)
    - [MirrorMapper](#mirrormapper)
+   - [lookingGlass RESTful API](#lookingglass-restful-api)
 <a name=""></a>
  
 <a name="util"></a>
@@ -1397,3 +1398,5 @@ util.seq([
 ], done)();
 ```
 
+<a name="lookingglass-restful-api"></a>
+# lookingGlass RESTful API
