@@ -15,10 +15,6 @@
      - [.batchPut(keyVals, callback(err))](#mongofs-batchputkeyvals-callbackerr)
      - [.getDir(path, expandFiles, callback(err, content))](#mongofs-getdirpath-expandfiles-callbackerr-content)
      - [.remove(path, timestamp, callback(err))](#mongofs-removepath-timestamp-callbackerr)
-     - [.createMapping(path, mapping, callback(err, actions))](#mongofs-createmappingpath-mapping-callbackerr-actions)
-       - [with .put()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-put)
-       - [with .remove()](#mongofs-createmappingpath-mapping-callbackerr-actions-with-remove)
-     - [.removeMapping(path, tsid, callback(err, actions))](#mongofs-removemappingpath-tsid-callbackerr-actions)
      - [as StorageDriver](#mongofs-as-storagedriver)
        - [.transaction(trans, callback(err, actions))](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions)
          - [get](#mongofs-as-storagedriver-transactiontrans-callbackerr-actions-get)
@@ -439,136 +435,6 @@ mfs.remove('/file/to/delete', 900, protect(done, function(err) {
 }));
 ```
 
-<a name="mongofs-createmappingpath-mapping-callbackerr-actions"></a>
-## .createMapping(path, mapping, callback(err, actions))
-should add an entry in the ".m" sub-document of the directory.
-
-```js
-mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
-    coll.find({_id: '/a/b/'}).toArray(protect(done, function(err, array) {
-        assert.equal(array.length, 1);
-        assert(array[0].m, 'mapping sub-doc must exist');
-        for(var key in array[0].m) {
-            // This should be the only one...
-            assert.equal(array[0].m[key].map, 123);
-        }
-        done();
-    }));
-}));
-```
-
-should emit actions including the mapping for all files in the directory.
-
-```js
-mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
-    var mappings = actionsToMappings(actions);
-    assert(mappings['map:/a/b/c'], 'Valid mapping for /a/b/c');
-    assert(mappings['map:/a/b/d'], 'Valid mapping for /a/b/d');
-    assert(mappings['map:/a/b/e'], 'Valid mapping for /a/b/e');
-    done();
-}));
-```
-
-should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree.
-
-```js
-mfs.createMapping('/a/b/', {map: 123}, protect(done, function(err, actions) {
-    trampoline(mfs, actions, protect(done, function(err, actions) {
-        var mappings = actionsToMappings(actions);
-        assert(mappings['map:/a/b/c'], 'Valid mapping for /a/b/c');
-        assert(mappings['map:/a/b/d'], 'Valid mapping for /a/b/d');
-        assert(mappings['map:/a/b/e'], 'Valid mapping for /a/b/e');
-        assert(mappings['map:/a/b/f/g'], 'Valid mapping for /a/b/f/g');
-        done();
-    }));
-}));
-```
-
-should work whether or not the directory already exists.
-
-```js
-mfs.createMapping('/qwe/rty/', {foo: 'bar'}, protect(done, function(err, actions) {
-    mfs.put('/qwe/rty/uio', {baz: 'bat'}, protect(done, function(err, actions2) {
-        assert.equal(actions2.length, 1);
-        assert.equal(actions2[0].type, 'map');
-        assert.equal(actions2[0].mapping.foo, 'bar');
-        assert.equal(actions2[0].path, '/qwe/rty/uio');
-        done();
-    }));
-}));
-```
-
-<a name="mongofs-createmappingpath-mapping-callbackerr-actions-with-put"></a>
-### with .put()
-should cause subsequent calls to .put() emit the mapping for the new object.
-
-```js
-mfs.put('/a/b/g', {a:7}, protect(done, function(err, actions) {
-    for(var i = 0; i < actions.length; i++) {
-        if(actions[i].type == 'map' && 
-            actions[i].mapping.map == 333 && 
-            actions[i].path == '/a/b/g') {
-            return done();
-        }
-    }
-    done(new Error('Could not find action relating to this mapping. Found: ' + JSON.stringify(actions)));
-}));
-```
-
-should cause put() that overrides an existing value provide mapping for the new value and unmapping for the old one.
-
-```js
-util.seq([
-    function(_) { mfs.put('/x?/y', {value: 'old'}, _); },
-    function(_) { mfs.createMapping('/x?/', {map: 1}, _.to('actions')); },
-    function(_) { trampoline(mfs, this.actions, _); },
-    function(_) { setTimeout(_, 2); },
-    function(_) { mfs.put('/x?/y', {value: 'new'}, _.to('actions')); },
-    function(_) {
-        var mappings = actionsToMappings(this.actions);
-        assert(mappings['map:/x?/y'], 'New value mapped');
-        assert.equal(mappings['map:/x?/y'].content.value, 'new');
-        assert(mappings['unmap:/x?/y'], 'Old value unmapped');
-        assert.equal(mappings['unmap:/x?/y'].content.value, 'old');
-        _();
-    },
-], done)();
-```
-
-<a name="mongofs-createmappingpath-mapping-callbackerr-actions-with-remove"></a>
-### with .remove()
-should emit unmapping of the removed content.
-
-```js
-mfs.remove('/a/b/c', undefined, protect(done, function(err, actions){
-    assert(actions.length >= 1, 'there should be at least one unmap');
-    for(var i = 0; i < actions.length; i++) {
-        assert.equal(actions[i].type, 'unmap');
-        assert.equal(actions[i].path, '/a/b/c');
-    }
-    done();
-}));
-```
-
-<a name="mongofs-removemappingpath-tsid-callbackerr-actions"></a>
-## .removeMapping(path, tsid, callback(err, actions))
-should remove the mapping with tsid from path, and produce actions to undo its effect.
-
-```js
-util.seq([
-    function(_) { mfs.removeMapping('/e/f!/', mapping._ts, _.to('actions')); },
-    function(_) { trampoline(mfs, this.actions, _.to('actions')); },
-    function(_) { 
-        var mapping = actionsToMappings(this.actions);
-        assert(mapping['unmap:/e/f!/g'], 'unmap:/e/f!/g');
-        assert(mapping['unmap:/e/f!/h'], 'unmap:/e/f!/h');
-        assert(mapping['unmap:/e/f!/i/j'], 'unmap:/e/f!/i/j');
-        assert(mapping['unmap:/e/f!/i/k'], 'unmap:/e/f!/i/k');
-        _();
-    },
-], done)();
-```
-
 <a name="mongofs-as-storagedriver"></a>
 ## as StorageDriver
 should support any kind of characters in paths, with the exception that slash (/) and star (*).
@@ -873,7 +739,7 @@ should remove the mapping with ts from path, and produce actions to undo its eff
 
 ```js
 util.seq([
-    function(_) { driver.transaction({path: '/e/f!/', unmap: [mapping._ts]}, _.to('actions')); },
+    function(_) { driver.transaction({path: '/e/f!/', unmap: [mapping._id]}, _.to('actions')); },
     function(_) { trampoline(driver, this.actions, _.to('actions')); },
     function(_) { 
         var mappings = actionsToMappings(this.actions);
@@ -883,6 +749,13 @@ util.seq([
         assert(mappings['unmap:/e/f!/i/k'], 'unmap:/e/f!/i/k');
         _();
     },
+    function(_) { driver.transaction({path: '/e/f!/i/', put: {l: {a:5}}}, _.to('actions')); },
+    function(_) { trampoline(driver, this.actions, _.to('actions')); },
+    function(_) {
+			    var mappings = actionsToMappings(this.actions);
+			    assert(!mappings['map:/e/f!/i/l'], 'mapping should be removed');
+			    _();
+			},
 ], done)();
 ```
 
@@ -1434,37 +1307,8 @@ should treat mapping results for which the path is a directory, as new mappings.
 // We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
 // following relationships, /tweet/<user>/* files containing individual tweets, and
 // timelines being mapped to /timeline/<user>/*
-
-var mapFunction = function(path, content) {
-		// Put followee tweets in the follower's timeline
-		var mapTweet = function(path, content) {
-		    var splitPath = path.split('/');
-		    var author = splitPath[2];
-		    emit('/timeline/' + this.follower + '/' + content._ts, 
-			 {text: content.text, from: author});
-		};
-		// Create a mapping for each following relationship
-		var splitPath = path.split('/');
-		var follower = splitPath[2];
-		var followee = splitPath[3];
-		emit('/tweet/' + followee + '/', {
-		    _mapper: 'javascript',
-		    func: mapTweet.toString(),
-		    follower: follower,
-		});
-};
 util.seq([
-		function(_) { this.w1 = disp.transaction({path: '/follow/', map: {
-		    _mapper: 'javascript',
-		    func: mapFunction.toString(),
-		}}, _); },
-		function(_) { this.w2 = disp.transaction({path: '/tweet/alice/', put: {a: {text: 'Hi, I\'m alice'}}}, _); },
-		function(_) { this.w3 = disp.transaction({path: '/tweet/bob/', put: {b: {text: 'Hi, I\'m bob'}}}, _); },
-		function(_) { this.w4 = disp.transaction({path: '/follow/alice/', put: {bob: {}}}, _); },
-		function(_) { disp.wait(this.w1, _); },
-		function(_) { disp.wait(this.w2, _); },
-		function(_) { disp.wait(this.w3, _); },
-		function(_) { disp.wait(this.w4, _); },
+		function(_) { tweeterExample(_); },
 		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{expandFiles:1}}, _.to('dir')); },
 		function(_) {
 		    var found = false;
@@ -1475,6 +1319,55 @@ util.seq([
 			found = true;
 		    }
 		    assert(found, 'should find an entry in alice\'s timeline');
+		    _();
+		},
+], done)();
+
+function tweeterExample(done) {
+		var mapFunction = function(path, content) {
+		    // Put followee tweets in the follower's timeline
+		    var mapTweet = function(path, content) {
+			var splitPath = path.split('/');
+			var author = splitPath[2];
+			emit('/timeline/' + this.follower + '/' + content._ts, 
+			     {text: content.text, from: author});
+		    };
+		    // Create a mapping for each following relationship
+		    var splitPath = path.split('/');
+		    var follower = splitPath[2];
+		    var followee = splitPath[3];
+		    emit('/tweet/' + followee + '/', {
+			_mapper: 'javascript',
+			func: mapTweet.toString(),
+			follower: follower,
+		    });
+		};
+		util.seq([
+		    function(_) { this.w1 = disp.transaction({path: '/follow/', map: {
+			_mapper: 'javascript',
+			func: mapFunction.toString(),
+		    }}, _); },
+		    function(_) { this.w2 = disp.transaction({path: '/tweet/alice/', put: {a: {text: 'Hi, I\'m alice'}}}, _); },
+		    function(_) { this.w3 = disp.transaction({path: '/tweet/bob/', put: {b: {text: 'Hi, I\'m bob'}}}, _); },
+		    function(_) { this.w4 = disp.transaction({path: '/follow/alice/', put: {bob: {}}}, _); },
+		    function(_) { disp.wait(this.w1, _); },
+		    function(_) { disp.wait(this.w2, _); },
+		    function(_) { disp.wait(this.w3, _); },
+		    function(_) { disp.wait(this.w4, _); },
+		], done)();
+}
+```
+
+should unmap when a file creating a mapping, is removed.
+
+```js
+util.seq([
+		function(_) { tweeterExample(_); },
+		function(_) { this.w1 = disp.transaction({path: '/follow/alice/', remove: ['bob']}, _); },
+		function(_) { disp.wait(this.w1, _); },
+		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{}}, _.to('dir')); },
+		function(_) {
+		    assert.equal(this.dir.length, 0); // timeline should be empty
 		    _();
 		},
 ], done)();

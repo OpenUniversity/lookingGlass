@@ -180,7 +180,7 @@ describe('MongoFS', function() {
         }
         return mappings;
     }
-    describe('.createMapping(path, mapping, callback(err, actions))', function() {
+/*    describe('.createMapping(path, mapping, callback(err, actions))', function() {
         before(function(done) {
             mfs.batchPut({'/a/b/c': {a:1},'/a/b/d': {a:2},'/a/b/e': {a:3},'/a/b/f/g': {a:4}}, done);
         });
@@ -324,6 +324,7 @@ describe('MongoFS', function() {
             ], done)();
         });
     });
+*/
     it('should support any kind of characters in paths, with the exception that slash (/) and star (*)', function(done) {
         var path = '/!@#/$%^/&()/-=+_/,.?<>';
         util.seq([

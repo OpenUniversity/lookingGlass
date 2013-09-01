@@ -288,7 +288,8 @@ MFS.prototype.trans_map = function(map, update, fields, ts) {
     if(!update.$set) {
         update.$set = {};
     }
-    update.$set['m.' + ts] = map;
+    util.createHashID(map);
+    update.$set['m.' + map._id] = map;
     fields.f = 1;
     var self = this;
     return function(path, doc, actions) {
@@ -307,26 +308,33 @@ MFS.prototype.trans_map = function(map, update, fields, ts) {
     };
 };
 
-MFS.prototype.trans_unmap = function(map, update, fields, ts) {
+MFS.prototype.trans_unmap = function(unmap, update, fields, ts) {
     if(!update.$unset) {
         update.$unset = {};
     }
-    update.$unset['m.' + ts] = 0;
+    for(var i = 0; i < unmap.length; i++) {
+	update.$unset['m.' + unmap[i]] = 0;
+	fields['m.' + unmap[i]] = 1;
+    }
     fields.f = 1;
     var self = this;
     return function(path, doc, actions) {
         var files = doc.f;
-        for(var key in files) {
-            if(key.charAt(key.length-1) != '/') {
-                var vers = files[key];
-                if(vers.length == 0) continue;
-                var lastVer = vers[vers.length - 1];
-                if(lastVer._dead) continue;
-                actions.push({type: 'unmap', mapping: map, path: self.encoder.decode(path + key), content: lastVer});
-            } else {
-                actions.push({type: 'tramp', unmap: map, path: self.encoder.decode(path + key), _ts: ts});                    
-            }
-        }
+	for(var i = 0; i < unmap.length; i++) {
+	    var mapping = doc.m[unmap[i]];
+	    if(!mapping) throw Error('Invalid mapping ' + unmap[i]);
+	    for(var key in files) {
+		if(key.charAt(key.length-1) != '/') {
+		    var vers = files[key];
+		    if(vers.length == 0) continue;
+		    var lastVer = vers[vers.length - 1];
+		    if(lastVer._dead) continue;
+		    actions.push({type: 'unmap', mapping: mapping, path: self.encoder.decode(path + key), content: lastVer});
+		} else {
+		    actions.push({type: 'tramp', unmap: [unmap[i]], path: self.encoder.decode(path + key), _ts: ts});
+		}
+	    }
+	}
     };
 };
 

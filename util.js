@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 exports.protect = function(done, func) {
     return function(err) {
         if(err) return done(err);
@@ -191,4 +193,11 @@ exports.parsePath = function(path) {
         fileName: splitPath[splitPath.length - 1],
         dirPath: splitPath.slice(0, splitPath.length - 1).join('/') + '/'
     };
+};
+
+exports.createHashID = function(obj) {
+    var hash = crypto.createHash('sha1');
+    delete obj._id;
+    hash.update(JSON.stringify(obj), 'utf8');
+    obj._id = hash.digest('base64');
 };

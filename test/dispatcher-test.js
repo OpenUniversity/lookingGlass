@@ -383,7 +383,69 @@ describe('Dispatcher', function() {
 	    // We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
 	    // following relationships, /tweet/<user>/* files containing individual tweets, and
 	    // timelines being mapped to /timeline/<user>/*
+	    util.seq([
+		function(_) { tweeterExample(_); },
+		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{expandFiles:1}}, _.to('dir')); },
+		function(_) {
+		    var found = false;
+		    for(var i = 0; i < this.dir.length; i++) {
+			if(this.dir[i].type != 'content') continue;
+			assert.equal(this.dir[i].content.text, 'Hi, I\'m bob');
+			assert.equal(this.dir[i].content.from, 'bob');
+			found = true;
+		    }
+		    assert(found, 'should find an entry in alice\'s timeline');
+		    _();
+		},
+	    ], done)();
 
+	    function tweeterExample(done) {
+		var mapFunction = function(path, content) {
+		    // Put followee tweets in the follower's timeline
+		    var mapTweet = function(path, content) {
+			var splitPath = path.split('/');
+			var author = splitPath[2];
+			emit('/timeline/' + this.follower + '/' + content._ts, 
+			     {text: content.text, from: author});
+		    };
+		    // Create a mapping for each following relationship
+		    var splitPath = path.split('/');
+		    var follower = splitPath[2];
+		    var followee = splitPath[3];
+		    emit('/tweet/' + followee + '/', {
+			_mapper: 'javascript',
+			func: mapTweet.toString(),
+			follower: follower,
+		    });
+		};
+		util.seq([
+		    function(_) { this.w1 = disp.transaction({path: '/follow/', map: {
+			_mapper: 'javascript',
+			func: mapFunction.toString(),
+		    }}, _); },
+		    function(_) { this.w2 = disp.transaction({path: '/tweet/alice/', put: {a: {text: 'Hi, I\'m alice'}}}, _); },
+		    function(_) { this.w3 = disp.transaction({path: '/tweet/bob/', put: {b: {text: 'Hi, I\'m bob'}}}, _); },
+		    function(_) { this.w4 = disp.transaction({path: '/follow/alice/', put: {bob: {}}}, _); },
+		    function(_) { disp.wait(this.w1, _); },
+		    function(_) { disp.wait(this.w2, _); },
+		    function(_) { disp.wait(this.w3, _); },
+		    function(_) { disp.wait(this.w4, _); },
+		], done)();
+	    }
+	});
+	it('should unmap when a file creating a mapping, is removed', function(done) {
+	    util.seq([
+		function(_) { tweeterExample(_); },
+		function(_) { this.w1 = disp.transaction({path: '/follow/alice/', remove: ['bob']}, _); },
+		function(_) { disp.wait(this.w1, _); },
+		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{}}, _.to('dir')); },
+		function(_) {
+		    assert.equal(this.dir.length, 0); // timeline should be empty
+		    _();
+		},
+	    ], done)();
+	});
+	function tweeterExample(done) {
 	    var mapFunction = function(path, content) {
 		// Put followee tweets in the follower's timeline
 		var mapTweet = function(path, content) {
@@ -414,20 +476,8 @@ describe('Dispatcher', function() {
 		function(_) { disp.wait(this.w2, _); },
 		function(_) { disp.wait(this.w3, _); },
 		function(_) { disp.wait(this.w4, _); },
-		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{expandFiles:1}}, _.to('dir')); },
-		function(_) {
-		    var found = false;
-		    for(var i = 0; i < this.dir.length; i++) {
-			if(this.dir[i].type != 'content') continue;
-			assert.equal(this.dir[i].content.text, 'Hi, I\'m bob');
-			assert.equal(this.dir[i].content.from, 'bob');
-			found = true;
-		    }
-		    assert(found, 'should find an entry in alice\'s timeline');
-		    _();
-		},
 	    ], done)();
-	});
+	}
     });
 });
 

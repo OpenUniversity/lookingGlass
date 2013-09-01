@@ -18,7 +18,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
         var put = {};
         var retActions = [];
         var trackerPath = scheduler.getPath();
-        util.seq([
+	util.seq([
             function(_) { storage.transaction(trans, _.to('actions')); },
             function(_) { trackActions(this.actions, trans._ts, undefined, trackerPath, _); },
         ], callback)();
@@ -179,9 +179,22 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
             var actions = [];
             var cb = util.parallel(list.length, function() {callback(undefined, actions);});
             for(var i = 0; i < list.length; i++) {
-                var path = util.parsePath(list[i].path);
-                var trans = {_ts: job.content._ts, path: path.dirPath, remove: [path.fileName]};
-                self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
+                var trans = {};
+		if(list[i].path.charAt(list[i].path.length - 1) == '/') {
+		    var map = list[i].content;
+		    util.createHashID(map);
+		    var path = list[i].path;
+		    trans.unmap = [map._id];
+		    trans.path = path;
+		} else {
+                    var path = util.parsePath(list[i].path);
+		    trans.path = path.dirPath;
+		    trans.remove = [path.fileName];
+		}
+		trans._ts = job.content.actionTS;
+                self.transaction(trans, util.protect(callback, function(err, act) {
+		    actions = actions.concat(act); cb();
+		}));
             }
         }));
     };

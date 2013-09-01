@@ -272,14 +272,14 @@ function describeStorageDriver(driverContainer) {
                     ], done)();
                 });
                 describe('with put', function() {
-                    var mappingTS = util.timeUid();
+                    var mapping = {map: 333};
                     before(function(done) {
-                        driver.transaction({path: '/a/b/', map: {map: 333, _ts: mappingTS}}, util.protect(done, function(err, actions) {
+                        driver.transaction({path: '/a/b/', map: mapping}, util.protect(done, function(err, actions) {
                             trampoline(driver, actions, done);
                         }));
                     });
                     after(function(done) {
-                        driver.transaction({path: '/a/b/', unmap: [mappingTS]}, util.protect(done, function(err, actions) {
+                        driver.transaction({path: '/a/b/', unmap: [mapping._id]}, util.protect(done, function(err, actions) {
                             trampoline(driver, actions, done);
                         }));
                     });
@@ -314,14 +314,14 @@ function describeStorageDriver(driverContainer) {
                     });
                 });
                 describe('with remove', function() {
-                    var mappingTS = util.timeUid();
+                    var mapping = {map: 333};
                     before(function(done) {
-                        driver.transaction({path: '/a/b/', map: {map: 333, _ts: mappingTS}}, util.protect(done, function(err, actions) {
+                        driver.transaction({path: '/a/b/', map: mapping}, util.protect(done, function(err, actions) {
                             trampoline(driver, actions, done);
                         }));
                     });
                     after(function(done) {
-                        driver.transaction({path: '/a/b/', unmap: [mappingTS]}, util.protect(done, function(err, actions) {
+                        driver.transaction({path: '/a/b/', unmap: [mapping._id]}, util.protect(done, function(err, actions) {
                             trampoline(driver, actions, done);
                         }));
                     });
@@ -340,7 +340,7 @@ function describeStorageDriver(driverContainer) {
                 });
             });
             describe('unmap', function() {
-                var mapping = {m:1, _ts: util.timeUid()};
+                var mapping = {m:1};
                 before(function(done) {
                     util.seq([
                         function(_) { driver.transaction({path: '/e/f!/', put: {g: {a:1}, h: {a:2}}}, _); },
@@ -351,7 +351,7 @@ function describeStorageDriver(driverContainer) {
                 })
                 it('should remove the mapping with ts from path, and produce actions to undo its effect', function(done) {
                     util.seq([
-                        function(_) { driver.transaction({path: '/e/f!/', unmap: [mapping._ts]}, _.to('actions')); },
+                        function(_) { driver.transaction({path: '/e/f!/', unmap: [mapping._id]}, _.to('actions')); },
                         function(_) { trampoline(driver, this.actions, _.to('actions')); },
                         function(_) { 
                             var mappings = actionsToMappings(this.actions);
@@ -361,6 +361,13 @@ function describeStorageDriver(driverContainer) {
                             assert(mappings['unmap:/e/f!/i/k'], 'unmap:/e/f!/i/k');
                             _();
                         },
+                        function(_) { driver.transaction({path: '/e/f!/i/', put: {l: {a:5}}}, _.to('actions')); },
+                        function(_) { trampoline(driver, this.actions, _.to('actions')); },
+                        function(_) {
+			    var mappings = actionsToMappings(this.actions);
+			    assert(!mappings['map:/e/f!/i/l'], 'mapping should be removed');
+			    _();
+			},
                     ], done)();
                 });
             });
