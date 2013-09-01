@@ -379,8 +379,52 @@ describe('Dispatcher', function() {
                 },
             ], done)();
         });
-	it.skip('should treat mapping results that contain a _mapper field as new mappings', function(done) {
-	    
+	it('should treat mapping results for which the path is a directory, as new mappings', function(done) {
+	    // We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
+	    // following relationships, /tweet/<user>/* files containing individual tweets, and
+	    // timelines being mapped to /timeline/<user>/*
+
+	    var mapFunction = function(path, content) {
+		var mapTweet = function(path, content) {
+		    var splitPath = path.split('/');
+		    var author = splitPath[2];
+		    emit('/timeline/' + this.follower + '/' + content._ts, 
+			 {text: content.text, from: author});
+		};
+		var splitPath = path.split('/');
+		var follower = splitPath[2];
+		var followee = splitPath[3];
+		emit('/tweet/' + followee + '/', {
+		    _mapper: 'javascript',
+		    func: mapTweet.toString(),
+		    follower: follower,
+		});
+	    };
+	    util.seq([
+		function(_) { this.w1 = disp.transaction({path: '/follow/', map: {
+		    _mapper: 'javascript',
+		    func: mapFunction.toString(),
+		}}, _); },
+		function(_) { this.w2 = disp.transaction({path: '/tweet/alice/', put: {a: {text: 'Hi, I\'m alice'}}}, _); },
+		function(_) { this.w3 = disp.transaction({path: '/tweet/bob/', put: {b: {text: 'Hi, I\'m bob'}}}, _); },
+		function(_) { this.w4 = disp.transaction({path: '/follow/alice/', put: {bob: {}}}, _); },
+		function(_) { disp.wait(this.w1, _); },
+		function(_) { disp.wait(this.w2, _); },
+		function(_) { disp.wait(this.w3, _); },
+		function(_) { disp.wait(this.w4, _); },
+		function(_) { disp.transaction({path: '/timeline/alice/', getDir:{expandFiles:1}}, _.to('dir')); },
+		function(_) {
+		    var found = false;
+		    for(var i = 0; i < this.dir.length; i++) {
+			if(this.dir[i].type != 'content') continue;
+			assert.equal(this.dir[i].content.text, 'Hi, I\'m bob');
+			assert.equal(this.dir[i].content.from, 'bob');
+			found = true;
+		    }
+		    assert(found, 'should find an entry in bob\'s timeline');
+		    _();
+		},
+	    ], done)();
 	});
     });
 });

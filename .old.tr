@@ -80,9 +80,8 @@
     Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data: [2K[0G  ․ Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data
     Dispatcher mapping should handle unmap operations by removing mirrored data: [2K[0G  ․ Dispatcher mapping should handle unmap operations by removing mirrored data
     Dispatcher mapping should support the javascript mapper: [2K[0G  ․ Dispatcher mapping should support the javascript mapper
-  - Dispatcher mapping should treat mapping results that contain a _mapper field as new mappings
+    Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
 
   82 passing (2 seconds)
-  1 pending
 

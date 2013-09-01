@@ -144,11 +144,20 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
             var actions = [];
             var cb = util.parallel(list.length, function() {callback(undefined, actions);});
             for(var i = 0; i < list.length; i++) {
-                var path = util.parsePath(list[i].path);
-                var content = list[i].content;
-                var put = {};
-                put[path.fileName] = content;
-                var trans = {_ts: job.content._ts, path: path.dirPath, put: put};
+		var trans = {};
+		if(list[i].path.charAt(list[i].path.length - 1) == '/') {
+		    var path = list[i].path;
+		    trans.path = path;
+		    trans.map = list[i].content;
+		} else {
+                    var path = util.parsePath(list[i].path);
+                    var content = list[i].content;
+                    var put = {};
+                    put[path.fileName] = content;
+                    trans.path= path.dirPath;
+		    trans.put= put;
+		}
+		trans._ts = job.content._ts;
                 self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
             }
         }));
