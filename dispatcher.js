@@ -26,7 +26,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
     };
 
     function selectJob(dir) {
-        for(var i = 0; i < dir.length; i++) {    
+        for(var i = 0; i < dir.length; i++) {
             if(dir[i].type != 'content') continue;
             var name = dir[i].path;
             var nameSplit = name.split('/');
@@ -72,9 +72,9 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
     };
 
     this.tock = function(job, callback) {
-        var self = this;
-        this['do_' + job.content.type](job, util.protect(callback, function(err, actions) {
-            trackActions(actions, job.content.actionTS, job, job.path, callback);
+	var self = this;
+	this['do_' + job.content.type](job, util.protect(callback, function(err, actions) {
+	    trackActions(actions, job.content.actionTS, job, job.path, callback);
         }));
     };
     function trackActions(actions, ts, job, path, callback) {
@@ -94,14 +94,14 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
         }
         var trans = {path: path, put: put};
         if(job) {
-            numActions--;
+	    numActions--;
             trans['remove'] = ['^' + job.name];
         }
         if(/*numActions != 0 || job*/true) {
             trans.accum = {};
             trans.accum['count-' + ts] = numActions;
-            tracker.transaction(trans, util.protect(callback, function() {
-                callback(undefined, retActions);
+	    tracker.transaction(trans, util.protect(callback, function() {
+		callback(undefined, retActions);
             }));
         } else {
             callback(undefined, retActions);
@@ -137,7 +137,7 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
         }
         if(!mapper) return callback(undefined, []);
         var self = this;
-        mapper.map(job.content, util.protect(callback, function(err, list) {
+	mapper.map(job.content, util.protect(callback, function(err, list) {
             if(list.length == 0) {
                 return callback(undefined, []);
             }
@@ -157,8 +157,8 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
                     trans.path= path.dirPath;
 		    trans.put= put;
 		}
-		trans._ts = job.content._ts;
-                self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
+		trans._ts = job.content.actionTS;
+		self.transaction(trans, function(err, act) {actions = actions.concat(act); cb();});
             }
         }));
     };
@@ -194,8 +194,8 @@ exports.Dispatcher = function(storage, tracker, scheduler, mappers, options) {
         var self = this;
         tracker.transaction({path: tracking.path, accum: accum}, util.protect(callback, function(err, actions) {
             assert.equal(actions.length, 1);
-            if(actions[0].content == 0) {
-                tracker.transaction({path: tracking.path, accumReset: [counterName]}, callback);
+	    if(actions[0].content == 0) {
+		tracker.transaction({path: tracking.path, accumReset: [counterName]}, callback);
             } else {
                 setTimeout(function() {
                     self.wait(tracking, callback, Math.min(waitInterval * waitIntervalGrowthFactor, maxWaitInterval));

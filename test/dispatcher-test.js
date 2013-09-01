@@ -379,18 +379,20 @@ describe('Dispatcher', function() {
                 },
             ], done)();
         });
-	it.only('should treat mapping results for which the path is a directory, as new mappings', function(done) {
+	it('should treat mapping results for which the path is a directory, as new mappings', function(done) {
 	    // We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
 	    // following relationships, /tweet/<user>/* files containing individual tweets, and
 	    // timelines being mapped to /timeline/<user>/*
 
 	    var mapFunction = function(path, content) {
+		// Put followee tweets in the follower's timeline
 		var mapTweet = function(path, content) {
 		    var splitPath = path.split('/');
 		    var author = splitPath[2];
 		    emit('/timeline/' + this.follower + '/' + content._ts, 
 			 {text: content.text, from: author});
 		};
+		// Create a mapping for each following relationship
 		var splitPath = path.split('/');
 		var follower = splitPath[2];
 		var followee = splitPath[3];
@@ -421,7 +423,7 @@ describe('Dispatcher', function() {
 			assert.equal(this.dir[i].content.from, 'bob');
 			found = true;
 		    }
-		    assert(found, 'should find an entry in bob\'s timeline');
+		    assert(found, 'should find an entry in alice\'s timeline');
 		    _();
 		},
 	    ], done)();

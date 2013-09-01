@@ -400,7 +400,7 @@ MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
             if(!doc.f) continue;
             var content = 0;
             if(field in doc.f) {
-                content = doc.f[field];
+		content = doc.f[field];
             }
             actions.push({type: 'content', path: path + field, content: content});
         }
