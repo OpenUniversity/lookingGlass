@@ -379,7 +379,7 @@ describe('Dispatcher', function() {
                 },
             ], done)();
         });
-	it('should treat mapping results for which the path is a directory, as new mappings', function(done) {
+	it.only('should treat mapping results for which the path is a directory, as new mappings', function(done) {
 	    // We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
 	    // following relationships, /tweet/<user>/* files containing individual tweets, and
 	    // timelines being mapped to /timeline/<user>/*
