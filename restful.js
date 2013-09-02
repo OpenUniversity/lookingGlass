@@ -61,6 +61,9 @@ exports.LookingGlassServer = function(disp, port) {
     this.do_GET = function(req, res, data, callback) {
 	var path = req.url;
 	var parsed = util.parsePath(path);
+	if(parsed.fileName == '') {
+	    return this.do_getDir(req, res, data, callback);
+	}
 	disp.transaction({path: parsed.dirPath, get:[parsed.fileName]}, function(err, actions) {
 	    try {
 		if(err) {
@@ -108,4 +111,17 @@ exports.LookingGlassServer = function(disp, port) {
 	    res.end(JSON.stringify({tracking: tracking, actions: actions}));
 	}));
     };
+    this.do_getDir = function(req, res, data, callback) {
+	var path = req.url;
+	disp.transaction({path: path, getDir:{expandFiles:1}}, util.protect(callback, function(err, actions) {
+	    var dir = {};
+	    for(var i = 0; i < actions.length; i++) {
+		if(actions[i].type != 'content') continue;
+		var parsed = util.parsePath(actions[i].path);
+		dir[parsed.fileName] = actions[i].content._ts;
+	    }
+	    res.writeHead(200, {'Content-Type': 'application/json'});
+	    res.end(JSON.stringify(dir));
+	}));
+    }
 };

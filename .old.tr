@@ -79,8 +79,10 @@
     lookingGlass RESTful API PUT should accept data of any content type: [2K[0G  ․ lookingGlass RESTful API PUT should accept data of any content type
     lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist: [2K[0G  ․ lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist
     lookingGlass RESTful API GET should return files stored with any content type, providing the content type given at storage: [2K[0G  ․ lookingGlass RESTful API GET should return files stored with any content type, providing the content type given at storage
+    lookingGlass RESTful API GET should retrieve the content of a directory, if the path ends with a slash: [2K[0G  ․ lookingGlass RESTful API GET should retrieve the content of a directory, if the path ends with a slash
+    lookingGlass RESTful API GET should provide timestamps for each file when retrieving a directory: [2K[0G  ․ lookingGlass RESTful API GET should provide timestamps for each file when retrieving a directory
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  82 passing (2 seconds)
+  84 passing (2 seconds)
 

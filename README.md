@@ -1468,6 +1468,42 @@ util.seq([
 ], done)();
 ```
 
+should retrieve the content of a directory, if the path ends with a slash.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/a', {hello: 'world'}, _); },
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/b', {hola: 'mondi'}, _); },
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/c', {shalom: 'olam'}, _); },
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/d', {privet: 'mir'}, _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert(this.resp.a, 'a should exist');
+		    assert(this.resp.b, 'b should exist');
+		    assert(this.resp.c, 'c should exist');
+		    assert(this.resp.d, 'd should exist');
+		    _();
+		},
+], done)();
+```
+
+should provide timestamps for each file when retrieving a directory.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {put: {a: {hello: 'world'}}, _ts: "0100"}, _); },
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {put: {b: {hola: 'mondi'}}, _ts: "0101"}, _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.resp.a, '0100');
+		    assert.equal(this.resp.b, '0101');
+		    _();
+		},
+], done)();
+```
+
 <a name="lookingglass-restful-api-delete"></a>
 ## DELETE
 should remove a file as response to a DELETE request.
