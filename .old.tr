@@ -75,8 +75,7 @@
     Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings: [2K[0G  ․ Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings
     Dispatcher mapping should unmap when a file creating a mapping, is removed: [2K[0G  ․ Dispatcher mapping should unmap when a file creating a mapping, is removed
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
-  - lookingGlass RESTful API should response to GET requests with JSON objects provided in PUT requests to the same location
+    lookingGlass RESTful API should response to GET requests with JSON objects provided in PUT requests to the same location: [2K[0G  ․ lookingGlass RESTful API should response to GET requests with JSON objects provided in PUT requests to the same location
 
-  76 passing (2 seconds)
-  1 pending
+  77 passing (2 seconds)
 

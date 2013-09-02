@@ -1400,3 +1400,22 @@ util.seq([
 
 <a name="lookingglass-restful-api"></a>
 # lookingGlass RESTful API
+should response to GET requests with JSON objects provided in PUT requests to the same location.
+
+```js
+var URL = 'http://localhost:47837/foo/bar';
+util.seq([
+    function(_) { util.httpJsonReq('PUT', URL, {
+	myFoo: 'myBar',
+    }, _.to('statusCode', 'headers', 'resp')); },
+    function(_) { assert.equal(this.statusCode, 201); _(); },
+    function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
+    function(_) {
+	assert.equal(this.statusCode, 200);
+	assert.equal(this.headers['content-type'], 'application/json');
+	assert.equal(this.resp.myFoo, 'myBar');
+	_();
+    },
+], done)();
+```
+
