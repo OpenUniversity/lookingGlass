@@ -38,6 +38,7 @@
      - [mapping](#dispatcher-mapping)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
+     - [PUT](#lookingglass-restful-api-put)
      - [GET](#lookingglass-restful-api-get)
      - [DELETE](#lookingglass-restful-api-delete)
      - [POST](#lookingglass-restful-api-post)
@@ -1403,22 +1404,24 @@ util.seq([
 
 <a name="lookingglass-restful-api"></a>
 # lookingGlass RESTful API
+<a name="lookingglass-restful-api-put"></a>
+## PUT
 should respond to GET requests with JSON objects provided in PUT requests to the same location.
 
 ```js
 var URL = 'http://localhost:47837/foo/bar';
 util.seq([
-    function(_) { util.httpJsonReq('PUT', URL, {
-	myFoo: 'myBar',
-    }, _.to('statusCode', 'headers', 'resp')); },
-    function(_) { assert.equal(this.statusCode, 201); _(); },
-    function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
-    function(_) {
-	assert.equal(this.statusCode, 200);
-	assert.equal(this.headers['content-type'], 'application/json');
-	assert.equal(this.resp.myFoo, 'myBar');
-	_();
-    },
+		function(_) { util.httpJsonReq('PUT', URL, {
+		    myFoo: 'myBar',
+		}, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 201); _(); },
+		function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.headers['content-type'], 'application/json');
+		    assert.equal(this.resp.myFoo, 'myBar');
+		    _();
+		},
 ], done)();
 ```
 

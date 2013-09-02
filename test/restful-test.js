@@ -44,21 +44,23 @@ describe('lookingGlass RESTful API', function() {
             function(_) { trackerColl.remove({}, _); },
 	], done)();
     });
-    it('should respond to GET requests with JSON objects provided in PUT requests to the same location', function(done) {
-	var URL = 'http://localhost:47837/foo/bar';
-	util.seq([
-	    function(_) { util.httpJsonReq('PUT', URL, {
-		myFoo: 'myBar',
-	    }, _.to('statusCode', 'headers', 'resp')); },
-	    function(_) { assert.equal(this.statusCode, 201); _(); },
-	    function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
-	    function(_) {
-		assert.equal(this.statusCode, 200);
-		assert.equal(this.headers['content-type'], 'application/json');
-		assert.equal(this.resp.myFoo, 'myBar');
-		_();
-	    },
-	], done)();
+    describe('PUT', function() {
+	it('should respond to GET requests with JSON objects provided in PUT requests to the same location', function(done) {
+	    var URL = 'http://localhost:47837/foo/bar';
+	    util.seq([
+		function(_) { util.httpJsonReq('PUT', URL, {
+		    myFoo: 'myBar',
+		}, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 201); _(); },
+		function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.headers['content-type'], 'application/json');
+		    assert.equal(this.resp.myFoo, 'myBar');
+		    _();
+		},
+	    ], done)();
+	});
     });
     describe('GET', function() {
 	it('should return a status of 404 when accessing a file that does not exist', function(done) {
