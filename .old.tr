@@ -78,8 +78,9 @@
     lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them: [2K[0G  ․ lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them
     lookingGlass RESTful API PUT should accept data of any content type: [2K[0G  ․ lookingGlass RESTful API PUT should accept data of any content type
     lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist: [2K[0G  ․ lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist
+    lookingGlass RESTful API GET should return files stored with any content type, providing the content type given at storage: [2K[0G  ․ lookingGlass RESTful API GET should return files stored with any content type, providing the content type given at storage
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  81 passing (2 seconds)
+  82 passing (2 seconds)
 

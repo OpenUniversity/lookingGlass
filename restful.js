@@ -74,8 +74,16 @@ exports.LookingGlassServer = function(disp, port) {
 		}
 		for(var i = 0; i < actions.length; i++) {
 		    if(actions[i].type == 'content') {
-			res.writeHead(200, {'Content-Type': 'application/json'});
-			res.end(JSON.stringify(actions[0].content));
+			var content = actions[i].content;
+			var contentType = 'application/json';
+			if(content._content_type) {
+			    contentType = content._content_type;
+			    content = new Buffer(content._content, 'base64');
+			} else {
+			    content = JSON.stringify(content);
+			}
+			res.writeHead(200, {'Content-Type': contentType});
+			res.end(content);
 			return;
 		    }
 		}

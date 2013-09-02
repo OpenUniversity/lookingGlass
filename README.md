@@ -1428,14 +1428,18 @@ util.seq([
 should accept data of any content type.
 
 ```js
-var client = http.createClient(47837, 'localhost');
-var request = client.request('PUT', '/a/b/foo.txt', {host: 'localhost', 'content-type': 'text/foobar'});
-request.end('foo bar foo bar foo bar');
-request.on('error', done);
-request.on('response', function(resp) {
-		assert.equal(resp.statusCode, 201);
-		resp.on('end', done);
-});
+storeFileWithContentType('text/foobar', 'foo bar foo bar foo bar', done);
+
+function storeFileWithContentType(contentType, content, done) {
+		var client = http.createClient(47837, 'localhost');
+		var request = client.request('PUT', '/a/b/foo.txt', {host: 'localhost', 'content-type': contentType});
+		request.end(content);
+		request.on('error', done);
+		request.on('response', function(resp) {
+		    assert.equal(resp.statusCode, 201);
+		    resp.on('end', done);
+		});
+}
 ```
 
 <a name="lookingglass-restful-api-get"></a>
@@ -1446,6 +1450,21 @@ should return a status of 404 when accessing a file that does not exist.
 util.seq([
 		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/file/that/does/not/exist', undefined, _.to('statusCode', 'headers', 'resp')); },
 		function(_) { assert.equal(this.statusCode, 404); _(); },
+], done)();
+```
+
+should return files stored with any content type, providing the content type given at storage.
+
+```js
+util.seq([
+		function(_) { storeFileWithContentType('text/foobar', 'FOO-BAR', _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/a/b/foo.txt', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.headers['content-type'], 'text/foobar');
+		    assert.equal(this.resp, 'FOO-BAR');
+		    _();
+		},
 ], done)();
 ```
 
