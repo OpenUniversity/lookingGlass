@@ -178,11 +178,13 @@ exports.httpJsonReq = function(method, URL, content, callback) {
             data += chunk;
         });
         resp.on('end', exports.protect(function() {
-            if(resp.statusCode >= 400) {
+            if(resp.statusCode >= 500) {
                 callback(new Error('HTTP Error ' + resp.statusCode + ': ' + data));
-            } else {
+            } else if(resp.headers['content-type'] == 'application/json') {
                 callback(undefined, resp.statusCode, resp.headers, JSON.parse(data));
-            }
+            } else {
+		callback(undefined, resp.statusCode, resp.headers, data);
+	    }
         }));
     });
 };

@@ -38,6 +38,9 @@
      - [mapping](#dispatcher-mapping)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
+     - [GET](#lookingglass-restful-api-get)
+     - [DELETE](#lookingglass-restful-api-delete)
+     - [POST](#lookingglass-restful-api-post)
 <a name=""></a>
  
 <a name="util"></a>
@@ -1400,7 +1403,7 @@ util.seq([
 
 <a name="lookingglass-restful-api"></a>
 # lookingGlass RESTful API
-should response to GET requests with JSON objects provided in PUT requests to the same location.
+should respond to GET requests with JSON objects provided in PUT requests to the same location.
 
 ```js
 var URL = 'http://localhost:47837/foo/bar';
@@ -1416,6 +1419,55 @@ util.seq([
 	assert.equal(this.resp.myFoo, 'myBar');
 	_();
     },
+], done)();
+```
+
+<a name="lookingglass-restful-api-get"></a>
+## GET
+should return a status of 404 when accessing a file that does not exist.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/file/that/does/not/exist', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 404); _(); },
+], done)();
+```
+
+<a name="lookingglass-restful-api-delete"></a>
+## DELETE
+should remove a file as response to a DELETE request.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('DELETE', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 200); _(); },
+		function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 404); _(); },
+], done)();
+```
+
+<a name="lookingglass-restful-api-post"></a>
+## POST
+should perform the transaction enclosed in the body of the request.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {
+		    put: {foo: {bar: 'baz'}}
+		}, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 200); _(); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/foo', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.resp.bar, 'baz');
+		    _();
+		},
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {
+		    remove: ['foo'],
+		}, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 200); _(); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/foo', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 404); _(); },
 ], done)();
 ```
 
