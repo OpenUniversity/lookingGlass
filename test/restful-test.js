@@ -3,6 +3,7 @@ var assert = require('assert');
 var LookingGlassServer = require('../restful.js').LookingGlassServer;
 var MFS = require('../mongofs.js').MFS;
 var Dispatcher = require('../dispatcher.js').Dispatcher;
+var http = require('http');
 
 function DummyScheduler(path) {
     this.getPath = function() {
@@ -45,7 +46,7 @@ describe('lookingGlass RESTful API', function() {
 	], done)();
     });
     describe('PUT', function() {
-	it('should respond to GET requests with JSON objects provided in PUT requests to the same location', function(done) {
+	it('should stopre JSON object so that GET can retrieve them', function(done) {
 	    var URL = 'http://localhost:47837/foo/bar';
 	    util.seq([
 		function(_) { util.httpJsonReq('PUT', URL, {
@@ -60,6 +61,17 @@ describe('lookingGlass RESTful API', function() {
 		    _();
 		},
 	    ], done)();
+	});
+	it('should accept data of any content type', function(done) {
+	    var client = http.createClient(47837, 'localhost');
+	    var request = client.request('PUT', '/a/b/foo.txt', {host: 'localhost', 'content-type': 'text/foobar'});
+	    request.end('foo bar foo bar foo bar');
+	    request.on('error', done);
+	    request.on('response', function(resp) {
+		assert.equal(resp.statusCode, 201);
+		resp.on('end', done);
+	    });
+
 	});
     });
     describe('GET', function() {

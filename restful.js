@@ -7,13 +7,22 @@ exports.LookingGlassServer = function(disp, port) {
         var reqContent = '';
         util.seq([
             function(_) {
-                req.setEncoding('utf8');
+		if(req.headers['content-type'] == 'application/json') {
+                    req.setEncoding('utf8');
+		} else {
+                    req.setEncoding('base64');
+		}
                 req.on('data', function(data) { reqContent += data; });
                 req.on('end', _);
             },
             function(_) { 
 		var methodName = 'do_' + req.method;
-		var json = reqContent != '' ? JSON.parse(reqContent) : {};
+		var json = '';
+		if(req.headers['content-type'] == 'application/json') {
+		    json = JSON.parse(reqContent);
+		} else if(reqContent != '') {
+		    json = reqContent;
+		}
 		if(self[methodName]) {
 		    self[methodName](req, res, json, _);
 		} else {
@@ -40,6 +49,9 @@ exports.LookingGlassServer = function(disp, port) {
 	var path = req.url;
 	var parsed = util.parsePath(path);
 	var put = {};
+	if(typeof(data) == 'string') {
+	    data = {_content_type: req.headers['content-type'], _content: data};
+	}
 	put[parsed.fileName] = data;
 	disp.transaction({path: parsed.dirPath, put: put, _ts: data._ts}, util.protect(callback, function(err, actions) {
 	    res.writeHead(201, {'Content-Type': 'application/json'});

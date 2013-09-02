@@ -75,10 +75,11 @@
     Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings: [2K[0G  ․ Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings
     Dispatcher mapping should unmap when a file creating a mapping, is removed: [2K[0G  ․ Dispatcher mapping should unmap when a file creating a mapping, is removed
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
-    lookingGlass RESTful API PUT should respond to GET requests with JSON objects provided in PUT requests to the same location: [2K[0G  ․ lookingGlass RESTful API PUT should respond to GET requests with JSON objects provided in PUT requests to the same location
+    lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them: [2K[0G  ․ lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them
+    lookingGlass RESTful API PUT should accept data of any content type: [2K[0G  ․ lookingGlass RESTful API PUT should accept data of any content type
     lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist: [2K[0G  ․ lookingGlass RESTful API GET should return a status of 404 when accessing a file that does not exist
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  80 passing (2 seconds)
+  81 passing (2 seconds)
 
