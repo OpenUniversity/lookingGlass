@@ -139,16 +139,10 @@ describe('lookingGlass RESTful API', function() {
     });
     describe('DELETE', function() {
 	var URL = 'http://localhost:47837/foo/bar';
-	before(function(done) {
-	    util.seq([
-		function(_) { util.httpJsonReq('PUT', URL, {
-		    myFoo: 'myBar',
-		}, _.to('statusCode', 'headers', 'resp')); },
-		function(_) { assert.equal(this.statusCode, 201); _(); },
-	    ], done)();
-	});
 	it('should remove a file as response to a DELETE request', function(done) {
 	    util.seq([
+		function(_) { util.httpJsonReq('PUT', URL, { myFoo: 'myBar'}, _.to('statusCode', 'headers', 'resp')); },
+		function(_) { assert.equal(this.statusCode, 201); _(); },
 		function(_) { util.httpJsonReq('DELETE', URL, undefined, _.to('statusCode', 'headers', 'resp')); },
 		function(_) { assert.equal(this.statusCode, 200); _(); },
 		function(_) { util.httpJsonReq('GET', URL, undefined, _.to('statusCode', 'headers', 'resp')); },

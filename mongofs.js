@@ -164,21 +164,16 @@ MFS.prototype.transaction = function(trans, callback) {
             dirDoesNotExist = true;
             doc = {};
         }
-        var actions = [];
+	var result = {};
         for(var i = 0; i < postMethods.length; i++) {
-            postMethods[i](trans.path, doc, actions);
-        }
-        for(var i = 0; i < actions.length; i++) {    
-            if(actions[i].path) {
-                actions[i].path = self.encoder.decode(actions[i].path);
-            }
+            postMethods[i](trans.path, doc, result);
         }
         if(dirDoesNotExist) {
-            self.ensureParent(trans.path, util.protect(callback, function(err, parentActions) {
-                callback(undefined, parentActions.concat(actions)); 
+            self.ensureParent(trans.path, util.protect(callback, function(err, parentResult) {
+                callback(undefined, result); // TODO: something with parentResult
             }));
         } else {
-            callback(undefined, actions);
+            callback(undefined, result);
         }
     });
     if(hasFields(update)) {
@@ -194,7 +189,7 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
         fields['f.' + field] = 1;
     }
     var self = this;
-    return function(path, doc, actions) {
+    return function(path, doc, result) {
         for(var i = 0; i < get.length; i++) {
             var field = self.encoder.encode(get[i]);
             if(!doc.f) { self.throwFileNotFoundExeption(path + field); }
@@ -203,7 +198,7 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
             if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
             var content = getLatestVersionAsOf(vers, ts);
             if(content._dead) { self.throwFileNotFoundExeption(path + field); }
-            actions.push({type: 'content', path: path + field, content: content});
+	    result[get[i]] = content;
         }
     };
 };
@@ -284,7 +279,7 @@ MFS.prototype.throwFileNotFoundExeption = function(path) {
     throw err;
 }
 
-MFS.prototype.trans_map = function(map, update, fields, ts) {
+/*MFS.prototype.trans_map = function(map, update, fields, ts) {
     if(!update.$set) {
         update.$set = {};
     }
@@ -337,7 +332,7 @@ MFS.prototype.trans_unmap = function(unmap, update, fields, ts) {
 	}
     };
 };
-
+*/
 MFS.prototype.trans_remove = function(remove, update, fields, ts) {
     var put = {};
     for(var i = 0; i < remove.length; i++) {
@@ -349,7 +344,7 @@ MFS.prototype.trans_remove = function(remove, update, fields, ts) {
 MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
     this.trans_get(get, update, fields, ts);
     var self = this;
-    return function(path, doc, actions) {
+    return function(path, doc, result) {
         for(var i = 0; i < get.length; i++) {
             var field = self.encoder.encode(get[i]);
             if(!doc.f) continue;
@@ -358,7 +353,7 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
             if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
             var content = vers[vers.length - 1];
             if(content._dead) continue;
-            actions.push({type: 'content', path: path + field, content: content});
+	    result[get[i]] = content;
         }
     };
 };
@@ -366,20 +361,20 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
 MFS.prototype.trans_getDir = function(options, update, fields, ts) {
     fields.f = 1;
     var self = this;
-    return function(path, doc, actions) {
+    return function(path, doc, result) {
         var fields = doc.f;
         if(!fields) return;
         for(var key in fields) {
+	    result[self.encoder.decode(key)] = 1;
             var vers = fields[key];
             if(Array.isArray(vers)) {
                 if(vers.length == 0) throw new Error('No versions for ' + path);
                 var content = vers[vers.length - 1];
                 if(content._dead) continue;
                 if(options.expandFiles) {
-                    actions.push({type: 'content', path: path + key, content: content});
+                    result[self.encoder.decode(key)] = content;
                 }
-            }
-            actions.push({type: 'dir', path: path + key});
+	    }
         }
     }
 };
@@ -402,7 +397,7 @@ MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
         fields['f.' + encKey] = 1;
     }
     var self = this;
-    return function(path, doc, actions) {
+    return function(path, doc, result) {
         for(var key in accum) {
             var field = self.encoder.encode(key);
             if(!doc.f) continue;
@@ -410,7 +405,7 @@ MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
             if(field in doc.f) {
 		content = doc.f[field];
             }
-            actions.push({type: 'content', path: path + field, content: content});
+            result[key] = content;
         }
     };
 };
@@ -425,13 +420,14 @@ MFS.prototype.trans_accumReset = function(accumReset, update, fields, ts, query)
         fields['f.' + encKey] = 1;
     }
     var self = this;
-    return function(path, doc, actions) {
+    return function(path, doc, result) {
         for(var i = 0; i < accumReset.length; i++) {
-            var field = self.encoder.encode(accumReset[i]);
+	    var key = accumReset[i];
+            var field = self.encoder.encode(key);
             if(!doc.f) continue;
             if(!(field in doc.f)) continue;
             var content = doc.f[field];
-            actions.push({type: 'content', path: path + field, content: content});
+	    result[key] = content;
         }
     };
 };
