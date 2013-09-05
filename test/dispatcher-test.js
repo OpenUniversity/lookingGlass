@@ -17,7 +17,7 @@ var emptyMapping = {
     }
 };
 
-describe('Dispatcher', function() {
+describe.skip('Dispatcher', function() {
     var storage;
     var tracker;
     var storageColl;

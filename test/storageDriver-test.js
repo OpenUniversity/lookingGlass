@@ -23,7 +23,7 @@ function describeStorageDriver(driverContainer) {
     before(function() {
         driver = driverContainer.driver;
     });
-    describe.only('as StorageDriver', function() {
+    describe('as StorageDriver', function() {
         it('should support any kind of characters in paths, with the exception that slash (/) and star (*)', function(done) {
             var path = '/!@#/$%^/&(){}/-=+_/';
             var fileName = ',.?<>[]';
@@ -68,8 +68,8 @@ function describeStorageDriver(driverContainer) {
                 });
                 it('should not find the file if it was created past the transaction ts, as long as enough versions are stored', function(done) {
                     util.seq([
-                        function(_) { driver.transaction({_ts: '02000', path: '/some/thing/new/', put:{foo: {bar: 'baz'}}}, _); },
-                        function(_) { driver.transaction({_ts: '01000', path: '/some/thing/new/', get: ['foo']}, _); },
+                        function(_) { driver.transaction({_ts: '02000', path: '/some?/thing:/new!/', put:{'foo;': {bar: 'baz'}}}, _); },
+                        function(_) { driver.transaction({_ts: '01000', path: '/some?/thing:/new!/', get: ['foo;']}, _); },
                         function(_) {
                             done(new Error('File should not have been found'));
                         }
@@ -96,15 +96,15 @@ function describeStorageDriver(driverContainer) {
 		});
 		it('should return all files which names end with .<suffix>, if given *.<suffix>', function(done) {
 		    util.seq([
-			function(_) { driver.transaction({path: '/a/b/', put: {'foo.json': {x:1}, 'bar.json': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo().json': {x:1}, 'bar{}.json': {x:2}}}, _); },
 			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
 			function(_) {
 			    assert(!this.result.c, 'c should not be listed');
 			    assert(!this.result.d, 'd should not be listed');
-			    assert(this.result['foo.json'], 'foo.json should be listed');
-			    assert.equal(this.result['foo.json'].x, 1);
-			    assert(this.result['bar.json'], 'bar.json should be listed');
-			    assert.equal(this.result['bar.json'].x, 2);
+			    assert(this.result['foo().json'], 'foo().json should be listed');
+			    assert.equal(this.result['foo().json'].x, 1);
+			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
+			    assert.equal(this.result['bar{}.json'].x, 2);
 			    _();
 			},
 		    ], done)();
@@ -481,7 +481,7 @@ function describeStorageDriver(driverContainer) {
                         },
                     ], done)();
                 });
-                it.only('should allow the transaction to happen if the timestamps are accurate', function(done) {
+                it('should allow the transaction to happen if the timestamps are accurate', function(done) {
                     util.seq([
                         function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('c')); },
                         function(_) { driver.transaction({path: '/a/b/', tsCond: {c: this.c.c._ts}, put: {Y:{foo: 'bar'}}}, _); },

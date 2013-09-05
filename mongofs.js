@@ -225,7 +225,7 @@ MFS.prototype.addSubFields = function(obj, suffix, ts, result) {
 	var name = key + suffix;
 	var child = obj[key];
 	if(Array.isArray(child)) {
-	    result[name] = getLatestVersionAsOf(child, ts);
+	    result[this.encoder.decode(name)] = getLatestVersionAsOf(child, ts);
 	} else if(typeof(child) == 'object') {
 	    this.addSubFields(child, '.' + name, ts, result);
 	}

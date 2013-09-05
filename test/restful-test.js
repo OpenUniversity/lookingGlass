@@ -19,7 +19,7 @@ var mappers = {
     javascript: require('../jsMapper.js'),
 };
 
-describe('lookingGlass RESTful API', function() {
+describe.skip('lookingGlass RESTful API', function() {
     var storageColl, trackerColl, server;
     before(function(done) {
 	util.seq([

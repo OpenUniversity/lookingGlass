@@ -9,12 +9,8 @@
      - [parallel(n, callback)](#util-paralleln-callback)
      - [Worker](#util-worker)
    - [jsMapper](#jsmapper)
+   - [MatchMaker](#matchmaker)
    - [MongoFS](#mongofs)
-     - [.get(path, callback(err, file))](#mongofs-getpath-callbackerr-file)
-     - [.put(path, file, callback(err))](#mongofs-putpath-file-callbackerr)
-     - [.batchPut(keyVals, callback(err))](#mongofs-batchputkeyvals-callbackerr)
-     - [.getDir(path, expandFiles, callback(err, content))](#mongofs-getdirpath-expandfiles-callbackerr-content)
-     - [.remove(path, timestamp, callback(err))](#mongofs-removepath-timestamp-callbackerr)
      - [as StorageDriver](#mongofs-as-storagedriver)
        - [.transaction(trans, callback(err, result))](#mongofs-as-storagedriver-transactiontrans-callbackerr-result)
          - [get](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-get)
@@ -44,6 +40,248 @@
      - [POST](#lookingglass-restful-api-post)
 <a name=""></a>
  
+<a name="util"></a>
+# util
+<a name="util-seqfuncs-done"></a>
+## seq(funcs, done)
+should return a function that runs asynchronous functions in funcs in order.
+
+```js
+var d;
+var f = util.seq([
+    function(_) {d = done; setTimeout(_, 10);},
+    function(_) {d();}
+], function() {});
+f();
+```
+
+should handle errors by calling done with the error.
+
+```js
+util.seq([
+    function(_) {_(new Error('someError'));},
+    function(_) {assert(0, 'This should not be called'); _()}
+], function(err) { assert.equal(err.message, 'someError'); done(); })();
+```
+
+should handle exceptions thrown by functions by calling done with the exception.
+
+```js
+util.seq([
+    function(_) { throw new Error('someError');},
+    function(_) {assert(0, 'This should not be called'); _()}
+], function(err) { assert.equal(err.message, 'someError'); done(); })();
+```
+
+should call done with no error if all is successful.
+
+```js
+util.seq([
+    function(_) {setTimeout(_, 10);},
+    function(_) {setTimeout(_, 10);},
+    function(_) {setTimeout(_, 10);}
+], done)();
+```
+
+<a name="util-seqfuncs-done-_tonames"></a>
+### _.to(names...)
+should return a function that places the corresponding arguments in "this" (skipping err).
+
+```js
+util.seq([
+    function(_) { _.to('a', 'b', 'c')(undefined, 1, 2, 3); },
+    function(_) { assert.equal(this.a, 1); _(); },
+    function(_) { assert.equal(this.b, 2); _(); },
+    function(_) { assert.equal(this.c, 3); _(); },
+], done)();
+```
+
+<a name="util-timeuid"></a>
+## timeUid()
+should return a unique string.
+
+```js
+var vals = {};
+for(var i = 0; i < 10000; i++) {
+    var tuid = util.timeUid();
+    assert.equal(typeof(tuid), 'string');
+    assert(!(tuid in vals), 'Value not unique');
+    vals[tuid] = 1;
+}
+```
+
+should return a larger value when called over one millisecond later.
+
+```js
+var a, b;
+util.seq([
+    function(_) { a = util.timeUid(); setTimeout(_, 2); },
+    function(_) { b = util.timeUid(); setTimeout(_, 2); },
+    function(_) { assert(b > a, 'Later value is not larger than earlier'); _();},
+], done)();
+```
+
+<a name="util-encoderallowedspecial"></a>
+## Encoder(allowedSpecial)
+<a name="util-encoderallowedspecial-encodestr"></a>
+### .encode(str)
+should encode str in a way that will only include letters, digits or characters from allowedSpecial.
+
+```js
+var specialChars = '!@#$%^&*()_+<>?,./~`\'"[]{}\\|';
+var allowed = '_-+';
+var encoder = new util.Encoder(allowed);
+var enc = encoder.encode('abc' + specialChars + 'XYZ');
+for(var i = 0; i < specialChars.length; i++) {
+    if(allowed.indexOf(specialChars.charAt(i)) != -1) continue; // Ignore allowed characters
+    assert.equal(enc.indexOf(specialChars.charAt(i)), -1);
+}
+```
+
+should throw an exception if less than three special characters are allowed.
+
+```js
+assert.throws(function() {
+    util.encode('foo bar', '_+');
+}, 'at least three special characters must be allowed');
+```
+
+<a name="util-encoderallowedspecial-decodeenc"></a>
+### .decode(enc)
+should decode a string encoded with .encode().
+
+```js
+var encoder = new util.Encoder(allowed);
+var str = 'This is a test' + specialChars + ' woo hoo\n';
+assert.equal(encoder.decode(encoder.encode(str)), str);
+```
+
+<a name="util-paralleln-callback"></a>
+## parallel(n, callback)
+should return a callback function that will call "callback" after it has been called n times.
+
+```js
+var c = util.parallel(100, done);
+for(var i = 0; i < 200; i++) {
+    setTimeout(c, 20);
+}
+```
+
+should call the callback immediately with an error if an error is given to the parallel callback.
+
+```js
+var c = util.parallel(4, function(err) {
+    assert(err, 'This should fail');
+    done();
+});
+c();
+c();
+c(new Error('Some error'));
+c(); // This will not call the callback
+```
+
+<a name="util-worker"></a>
+## Worker
+should call a given function iteratively, in given intervals, until stopped.
+
+```js
+var n = 0;
+function f(callback) {
+    n++;
+    callback();
+}
+var worker = new util.Worker(f, 10 /*ms intervals*/);
+worker.start();
+setTimeout(util.protect(done, function() {
+    worker.stop();
+    assert(n >= 9 && n <= 11, 'n should be 10 +- 1 (' + n + ')');
+    done();
+}), 100);
+```
+
+should assure that no more than a given number of instances of the function are running at any given time.
+
+```js
+var n = 0;
+function f(callback) {
+    n++;
+    setTimeout(callback, 50); // Each run will take 50 ms
+}
+var worker = new util.Worker(f, 10 /*ms intervals*/, 2 /* instances in parallel */);
+worker.start();
+setTimeout(util.protect(done, function() {
+    worker.stop();
+    // Two parallel 50 ms instances over 100 ms gives us 4 instances.
+    assert(n >= 3 && n <= 5, 'n should be 4 +- 1 (' + n + ')');
+    done();
+}), 100);
+```
+
+<a name="jsmapper"></a>
+# jsMapper
+should receive a javascript function as the mapping's "func" field and call it with the entry as its "this".
+
+```js
+mappingFunction = function() {
+    this.beenHere = true;
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+    type: 'map',
+    mapping: mapping,
+    content: {foo: 'bar'},
+    path: '/a/b/c',
+}, function(err, list) {
+    assert(mapping.beenHere, 'indication that the mapping function has been executed');
+    done();
+});
+```
+
+should pass the function the path and the content to be mapped.
+
+```js
+mappingFunction = function(path, content) {
+    this.path = path;
+    this.content = content;
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+    type: 'map',
+    mapping: mapping,
+    content: {foo: 'bar'},
+    path: '/a/b/c',
+}, function(err, list) {
+    assert.equal(mapping.path, '/a/b/c');
+    assert.equal(mapping.content.foo, 'bar');
+    done();
+});
+```
+
+should provide an emit() function that contributes content actions to the output.
+
+```js
+mappingFunction = function(path, content) {
+    emit('/foo/bar', {foo: 'bar'});
+    emit('/a/b/c/d', {abc: 123});
+}
+var mapping = {func: mappingFunction.toString()};
+jsMapper.map({
+    type: 'map',
+    mapping: mapping,
+    content: {foo: 'bar'},
+    path: '/a/b/c',
+}, function(err, list) {
+    assert.equal(list.length, 2);
+    assert.equal(list[0].type, 'content');
+    assert.equal(list[0].path, '/foo/bar');
+    assert.equal(list[0].content.foo, 'bar');
+    assert.equal(list[1].type, 'content');
+    assert.equal(list[1].path, '/a/b/c/d');
+    assert.equal(list[1].content.abc, 123);
+    done();
+});
+```
+
 <a name="mongofs"></a>
 # MongoFS
 <a name="mongofs-as-storagedriver"></a>
@@ -136,8 +374,8 @@ should not find the file if it was created past the transaction ts, as long as e
 
 ```js
 util.seq([
-    function(_) { driver.transaction({_ts: '02000', path: '/some/thing/new/', put:{foo: {bar: 'baz'}}}, _); },
-    function(_) { driver.transaction({_ts: '01000', path: '/some/thing/new/', get: ['foo']}, _); },
+    function(_) { driver.transaction({_ts: '02000', path: '/some?/thing:/new!/', put:{'foo;': {bar: 'baz'}}}, _); },
+    function(_) { driver.transaction({_ts: '01000', path: '/some?/thing:/new!/', get: ['foo;']}, _); },
     function(_) {
         done(new Error('File should not have been found'));
     }
@@ -170,15 +408,15 @@ should return all files which names end with .<suffix>, if given *.<suffix>.
 
 ```js
 util.seq([
-			function(_) { driver.transaction({path: '/a/b/', put: {'foo.json': {x:1}, 'bar.json': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo().json': {x:1}, 'bar{}.json': {x:2}}}, _); },
 			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
 			function(_) {
 			    assert(!this.result.c, 'c should not be listed');
 			    assert(!this.result.d, 'd should not be listed');
-			    assert(this.result['foo.json'], 'foo.json should be listed');
-			    assert.equal(this.result['foo.json'].x, 1);
-			    assert(this.result['bar.json'], 'bar.json should be listed');
-			    assert.equal(this.result['bar.json'].x, 2);
+			    assert(this.result['foo().json'], 'foo().json should be listed');
+			    assert.equal(this.result['foo().json'].x, 1);
+			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
+			    assert.equal(this.result['bar{}.json'].x, 2);
 			    _();
 			},
 ], done)();
@@ -355,3 +593,51 @@ util.seq([
 ], done)();
 ```
 
+<a name="dispatcher"></a>
+# Dispatcher
+<a name="dispatcher-transactiontrans-callbackerr-actions"></a>
+## .transaction(trans, callback(err, actions))
+<a name="dispatcher-tickpath-callbackerr-job"></a>
+## .tick(path, callback(err, job))
+<a name="dispatcher-tockjob-callbackerr"></a>
+## tock(job, callback(err))
+<a name="dispatcher-start-and-stop"></a>
+## .start() and .stop()
+<a name="dispatcher-waitts-callbackerr"></a>
+## .wait(ts, callback(err))
+<a name="dispatcher-mapping"></a>
+## mapping
+<a name="mirrormapper"></a>
+# MirrorMapper
+should returns content objects identical to the source, except changing the path.
+
+```js
+util.seq([
+    function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/mirror', {
+        type: 'map',
+        mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
+        path: '/a/b/c/d',
+        content: {foo: 'bar'},
+    }, _.to('status', 'headers', 'response')); },
+    function(_) {
+        assert.equal(this.status, 200);
+        assert.equal(this.headers['content-type'], 'application/json');
+        assert.equal(this.response.length, 1);
+        assert.equal(this.response[0].type, 'content');
+        assert.equal(this.response[0].path, '/X/Y/c/d');
+        assert.equal(this.response[0].content.foo, 'bar');
+        _();
+    },
+], done)();
+```
+
+<a name="lookingglass-restful-api"></a>
+# lookingGlass RESTful API
+<a name="lookingglass-restful-api-put"></a>
+## PUT
+<a name="lookingglass-restful-api-get"></a>
+## GET
+<a name="lookingglass-restful-api-delete"></a>
+## DELETE
+<a name="lookingglass-restful-api-post"></a>
+## POST
