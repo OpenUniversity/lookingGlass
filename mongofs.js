@@ -368,11 +368,15 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
         for(var i = 0; i < get.length; i++) {
             var field = self.accessField(get[i], doc);
 	    if(!field) continue;
-            var vers = field;
-            if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
-            var content = vers[vers.length - 1];
-            if(content._dead) continue;
-	    result[get[i]] = content;
+	    if(Array.isArray(field)) {
+		var vers = field;
+		if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
+		var content = vers[vers.length - 1];
+		if(content._dead) continue;
+		result[get[i]] = content;
+	    } else if(typeof(field) == 'object') {
+		self.addSubFields(field, get[i].substr(1), ts, result);
+	    }
         }
     };
 };

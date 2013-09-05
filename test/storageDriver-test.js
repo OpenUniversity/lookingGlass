@@ -409,13 +409,24 @@ function describeStorageDriver(driverContainer) {
                 });*/
             });
             describe('getIfExists', function() {
-                it('should emit content actions only for the files that exist in the list', function(done) {
+                it('should return only the files that exist in the list', function(done) {
                     driver.transaction({path: '/a/b/', getIfExists: ['c', 'doesNotExist']}, util.protect(done, function(err, result) {
                         assert.equal(result.c.x, 1);
 			assert(!(result.doesNotExist), 'doesNotExist should not be returned');
                         done();
                     }));
                 });
+		it('should handle wildcards, just like "get", and succeed even if a file does not exist', function(done) {
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo.a': {x:1}, 'bar.b': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['*.a', '*.c']}, _.to('result')); },
+			function(_) {
+			    assert(this.result['foo.a'], 'foo.a should be included in the results');
+			    assert(!this.result['bar.b'], 'bar.b was not included in the query');
+			    _();
+			},
+		    ], done)();
+		});
             });
             describe('tsCond', function() {
                 it('should cause the transaction to be canceled if one of the given files does not have the corresponding ts value', function(done) {
