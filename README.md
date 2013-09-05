@@ -329,14 +329,11 @@ util.seq([
 		// Adding a .json file and collecing the result
 		function(_) { mm.transaction({path: '/a/b/', put: {'x.json': {x:1}}, _ts: '0101'}, _.to('result')); },
 		function(_) {
-		    assert.equal(this.result._map.length, 3);
-		    assert.equal(this.result._map[0].path, '/a/b/x.json');
-		    assert.deepEqual(this.result._map[0].content, {x:1, _ts: '0101'});
-		    assert.deepEqual(this.result._map[0].map, {m:1, _ts: '0100'});
-		    assert.deepEqual(this.result._map[1].content, {x:1, _ts: '0101'});
-		    assert.deepEqual(this.result._map[1].map, {m:2, _ts: '0100'});
-		    assert.deepEqual(this.result._map[2].content, {x:1, _ts: '0101'});
-		    assert.deepEqual(this.result._map[2].map, {m:3, _ts: '0100'});
+		    assert.deepEqual(this.result._map, [
+			{path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:1, _ts: '0100'}},
+			{path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:2, _ts: '0100'}},
+			{path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:3, _ts: '0100'}},
+		    ]);
 		    _();
 		},
 ], done)();
@@ -351,16 +348,11 @@ util.seq([
 		// Adding a .map file and collecing the result
 		function(_) { mm.transaction({path: '/a/b/', put: {'m..map': {m:1}}, _ts: '0101'}, _.to('result')); },
 		function(_) {
-		    assert.equal(this.result._map.length, 3);
-		    assert.equal(this.result._map[0].path, '/a/b/1.json');
-		    assert.deepEqual(this.result._map[0].content, {x:1, _ts: '0100'});
-		    assert.deepEqual(this.result._map[0].map, {m:1, _ts: '0101'});
-		    assert.equal(this.result._map[1].path, '/a/b/2.json');
-		    assert.deepEqual(this.result._map[1].content, {x:2, _ts: '0100'});
-		    assert.deepEqual(this.result._map[1].map, {m:1, _ts: '0101'});
-		    assert.equal(this.result._map[2].path, '/a/b/3.json');
-		    assert.deepEqual(this.result._map[2].content, {x:3, _ts: '0100'});
-		    assert.deepEqual(this.result._map[2].map, {m:1, _ts: '0101'});
+		    assert.deepEqual(this.result._map, [
+			{path: '/a/b/1.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0101'}},
+			{path: '/a/b/2.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0101'}},
+			{path: '/a/b/3.json', content: {x:3, _ts: '0100'}, map: {m:1, _ts: '0101'}},
+		    ]);
 		    _();
 		},
 ], done)();
