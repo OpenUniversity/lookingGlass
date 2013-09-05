@@ -417,59 +417,6 @@ function describeStorageDriver(driverContainer) {
                     }));
                 });
             });
-            describe.skip('getDir', function() {
-                it('should emit dir actions for all files in the directory', function(done) {
-                    driver.transaction({path: '/a/b/', getDir: {}}, util.protect(done, function(err, actions) {
-                        var dir = {};
-                        for(var i = 0; i < actions.length; i++) {
-                            if(actions[i].type == 'dir') {
-                                dir[actions[i].path] = 1;
-                            }
-                        }
-                        assert(dir['/a/b/c'], '/a/b/c should exist');
-                        assert(dir['/a/b/d'], '/a/b/d should exist');
-                        done();
-                    }));
-                });
-                it('should behave properly when used in conjunction with get', function(done) {
-                    driver.transaction({path: '/a/b/', getDir: {}, get: ['d']}, util.protect(done, function(err, actions) {
-                        var dir = actionsToDir(actions);
-                        assert(dir['/a/b/c'], '/a/b/c should exist');
-                        assert(dir['/a/b/d'], '/a/b/d should exist');
-                        done();
-                    }));
-                    function actionsToDir(actions) {
-                        var dir = {};
-                        for(var i = 0; i < actions.length; i++) {
-                            if(actions[i].type == 'dir') {
-                                dir[actions[i].path] = 1;
-                            }
-                        }
-                        return dir;
-                    }
-                });
-                it('should emit content entries with file contents when using the expandFiles option', function(done) {
-                    driver.transaction({path: '/a/b/', getDir: {expandFiles:1}}, util.protect(done, function(err, actions) {
-                        var dir = {};
-                        for(var i = 0; i < actions.length; i++) {
-                            if(actions[i].type == 'content') {
-                                dir[actions[i].path] = actions[i].content;
-                            }
-                        }
-                        assert.equal(dir['/a/b/c'].x, 1);
-                        assert.equal(dir['/a/b/d'].x, 2);
-                        done();
-                    }));
-                });
-                it('should not emit files that have been deleted', function(done) {
-                    util.seq([
-                        function(_) { driver.transaction({path: '/foo/bar', put:{baz:{x:2}}}, _); },
-                        function(_) { driver.transaction({path: '/foo/bar', remove:['baz']}, _); },
-                        function(_) { driver.transaction({path: '/foo/bar', getDir:{}}, _.to('dir')); },
-                        function(_) { assert.equal(this.dir.length, 0); _(); },
-                    ], done)();
-                });
-            });
             describe('tsCond', function() {
                 it('should cause the transaction to be canceled if one of the given files does not have the corresponding ts value', function(done) {
                     util.seq([

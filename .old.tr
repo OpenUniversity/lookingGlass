@@ -16,6 +16,7 @@
     jsMapper should receive a javascript function as the mapping's "func" field and call it with the entry as its "this": [2K[0G  ․ jsMapper should receive a javascript function as the mapping's "func" field and call it with the entry as its "this"
     jsMapper should pass the function the path and the content to be mapped: [2K[0G  ․ jsMapper should pass the function the path and the content to be mapped
     jsMapper should provide an emit() function that contributes content actions to the output: [2K[0G  ․ jsMapper should provide an emit() function that contributes content actions to the output
+    MatchMaker should proxy transactions to the underlying storage: [2K[0G  ․ MatchMaker should proxy transactions to the underlying storage
     MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*)
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value
@@ -39,10 +40,6 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file of the given path: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file of the given path
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file only if the removal timestamp is greater than the latest: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file only if the removal timestamp is greater than the latest
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) getIfExists should emit content actions only for the files that exist in the list: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) getIfExists should emit content actions only for the files that exist in the list
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) getDir should emit dir actions for all files in the directory
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) getDir should behave properly when used in conjunction with get
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) getDir should emit content entries with file contents when using the expandFiles option
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) getDir should not emit files that have been deleted
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) tsCond should cause the transaction to be canceled if one of the given files does not have the corresponding ts value
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) tsCond should allow the transaction to happen if the timestamps are accurate: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) tsCond should allow the transaction to happen if the timestamps are accurate
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should create files containing numbers, when given names that do not exist: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should create files containing numbers, when given names that do not exist
@@ -73,6 +70,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  38 passing (570 ms)
-  35 pending
+  39 passing (591 ms)
+  31 pending
 

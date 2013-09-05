@@ -21,7 +21,6 @@
          - [unmap](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-unmap)
          - [remove](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-remove)
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-getifexists)
-         - [getDir](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-getdir)
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-tscond)
          - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accum)
          - [accumReset](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accumreset)
@@ -282,6 +281,22 @@ jsMapper.map({
 });
 ```
 
+<a name="matchmaker"></a>
+# MatchMaker
+should proxy transactions to the underlying storage.
+
+```js
+util.seq([
+    function(_) { mm.transaction({path: '/a/b/', put:{'c.json':{x:1}}}, _); },
+    function(_) { storage.transaction({path: '/a/b/', get:['*']}, _.to('result')); },
+    function(_) {
+	assert(this.result['c.json'], 'c.json should exist in storage');
+	assert.equal(this.result['c.json'].x, 1);
+	_();
+    },
+], done)();
+```
+
 <a name="mongofs"></a>
 # MongoFS
 <a name="mongofs-as-storagedriver"></a>
@@ -512,8 +527,6 @@ driver.transaction({path: '/a/b/', getIfExists: ['c', 'doesNotExist']}, util.pro
 }));
 ```
 
-<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-getdir"></a>
-#### getDir
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-tscond"></a>
 #### tsCond
 should cause the transaction to be canceled if one of the given files does not have the corresponding ts value.
