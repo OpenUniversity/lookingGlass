@@ -142,9 +142,46 @@ util.seq([
         done(new Error('File should not have been found'));
     }
 ], function(err) {
-    assert(err.fileNotFound, 'File should not have been found');
-    done();
+			try {
+        assert(err.fileNotFound, 'File should not have been found');
+        done();
+			} catch(e) {
+			    done(e);
+			}
 })();
+```
+
+should return all files if given *.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: '*'}, _.to('result')); },
+			function(_) {
+			    assert(this.result.c, 'c should be listed');
+			    assert.equal(this.result.c.x, 1);
+			    assert(this.result.d, 'd should be listed');
+			    assert.equal(this.result.d.x, 2);
+			    _();
+			},
+], done)();
+```
+
+should return all files which names end with .<suffix>, if given *.<suffix>.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo.json': {x:1}, 'bar.json': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
+			function(_) {
+			    assert(!this.result.c, 'c should not be listed');
+			    assert(!this.result.d, 'd should not be listed');
+			    assert(this.result['foo.json'], 'foo.json should be listed');
+			    assert.equal(this.result['foo.json'].x, 1);
+			    assert(this.result['bar.json'], 'bar.json should be listed');
+			    assert.equal(this.result['bar.json'].x, 2);
+			    _();
+			},
+], done)();
 ```
 
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-put"></a>
@@ -246,7 +283,7 @@ should cause the transaction to be canceled if one of the given files does not h
 ```js
 util.seq([
     function(_) { driver.transaction({path: '/a/b/', tsCond: {c: 'wrongTS'}, put: {Y:{foo: 'bar'}}}, _); },
-    function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('result')); },
+    function(_) { driver.transaction({path: '/a/b/', get: ['*']}, _.to('result')); },
     function(_) {
         assert(!this.result.Y, 'Y should not be created because the timestamp for c is wrong');
         _();
@@ -260,7 +297,7 @@ should allow the transaction to happen if the timestamps are accurate.
 util.seq([
     function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('c')); },
     function(_) { driver.transaction({path: '/a/b/', tsCond: {c: this.c.c._ts}, put: {Y:{foo: 'bar'}}}, _); },
-    function(_) { driver.transaction({path: '/a/b/', getDir: {}}, _.to('result')); },
+    function(_) { driver.transaction({path: '/a/b/', get: ['*']}, _.to('result')); },
     function(_) {
         assert(this.result.Y, 'Y should be created because c has the correct timestamp');
         _();

@@ -6,6 +6,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the latest version prior to the transaction timestamp if one is stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the latest version prior to the transaction timestamp if one is stored
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the earliest stored version if latest prior to ts is not stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the earliest stored version if latest prior to ts is not stored
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored
+    MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files if given *: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files if given *
+    MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .<suffix>, if given *.<suffix>: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .<suffix>, if given *.<suffix>
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given
@@ -30,6 +32,6 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should add the given number to each file, and emit the previous value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should add the given number to each file, and emit the previous value
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accumReset should reset the given accumulators, so that subsequent reads receive 0: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accumReset should reset the given accumulators, so that subsequent reads receive 0
 
-  18 passing (171 ms)
+  20 passing (250 ms)
   12 pending
 

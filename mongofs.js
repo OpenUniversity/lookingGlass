@@ -1,4 +1,5 @@
 var util = require('./util.js');
+var assert = require('assert');
 
 function MFS(coll, options) {
     this.coll = coll;
@@ -47,10 +48,10 @@ MFS.prototype.ensureParent = function(path, callback) {
     }
     var parsed = util.parsePath(path.substr(0, path.length - 1));
     var proj = {};
-    proj['f.' + parsed.fileName] = 1;
+    proj[this.mongoField(parsed.fileName)] = 1;
     proj.m = 1;
     var update = {$set: {}};
-    update.$set['f.' + parsed.fileName + '/'] = 1;
+    update.$set[this.mongoField(parsed.fileName) + '/'] = 1;
     var self = this;
     this.coll.findAndModify({_id: parsed.dirPath}, {_id: 1}, update, {upsert: true, fields: proj}, util.protect(callback, function(err, doc) {
         var actions = [];
@@ -183,24 +184,52 @@ MFS.prototype.transaction = function(trans, callback) {
     }
 };
 
+MFS.prototype.accessField = function(name, doc) {
+    var fieldParts = this.mongoField(name).split('.');
+    var field = doc;
+    for(var i = 0; i < fieldParts.length; i++) {
+	if(fieldParts[i] != '') {
+	    field = field[fieldParts[i]];
+	}
+	if(!field) break;
+    }
+    return field;
+};
+
 MFS.prototype.trans_get = function(get, update, fields, ts) {
     for(var i = 0; i < get.length; i++) {
-        var field = this.encoder.encode(get[i]);
-        fields['f.' + field] = 1;
+	if(get[i].substr(0, 2) == '*.') __ = true;
+        fields[this.mongoField(get[i])] = 1;
     }
     var self = this;
     return function(path, doc, result) {
         for(var i = 0; i < get.length; i++) {
-            var field = self.encoder.encode(get[i]);
-            if(!doc.f) { self.throwFileNotFoundExeption(path + field); }
-            if(!(field in doc.f)) { self.throwFileNotFoundExeption(path + field); }
-            var vers = doc.f[field];
-            if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
-            var content = getLatestVersionAsOf(vers, ts);
-            if(content._dead) { self.throwFileNotFoundExeption(path + field); }
-	    result[get[i]] = content;
+	    var key = get[i];
+            var field = self.accessField(key, doc);
+	    if(Array.isArray(field)) {
+		var ver = getLatestVersionAsOf(field, ts);
+		if(ver._dead) { self.throwFileNotFoundException(key); }
+		result[key] = ver;
+	    } else if(typeof(field) == 'object'){
+		assert.equal(key.charAt(0), '*');
+		self.addSubFields(field, key.substr(1), ts, result);
+	    } else {
+		self.throwFileNotFoundException(key);
+	    }
         }
     };
+};
+
+MFS.prototype.addSubFields = function(obj, suffix, ts, result) {
+    for(var key in obj) {
+	var name = key + suffix;
+	var child = obj[key];
+	if(Array.isArray(child)) {
+	    result[name] = getLatestVersionAsOf(child, ts);
+	} else if(typeof(child) == 'object') {
+	    this.addSubFields(child, '.' + name, ts, result);
+	}
+    }
 };
 
 function getLatestVersionAsOf(vers, ts) {
@@ -217,7 +246,11 @@ function removeSubFieldsOfExistingFields(fields) {
         fieldNames.push(name);
     }
     for(var i = 0; i < fieldNames.length; i++) {
-        removeFieldsStartingWith(fields, fieldNames[i] + '.');
+	if(fieldNames[i] == '') {
+            removeFieldsStartingWith(fields, '');
+	} else {
+            removeFieldsStartingWith(fields, fieldNames[i] + '.');
+	}
     }
 }
 function removeFieldsStartingWith(obj, prefix) {
@@ -228,6 +261,17 @@ function removeFieldsStartingWith(obj, prefix) {
     }
 }
 
+MFS.prototype.mongoField = function(field) {
+    var comp = field.split('.');
+    if(comp[0] == '*') {
+	comp.shift();
+    }
+    comp.reverse();
+    var self = this;
+    comp = comp.map(function(x) { return self.encoder.encode(x); });
+    return comp.join('.');
+}
+
 MFS.prototype.trans_put = function(put, update, fields, ts) {
     if(!update.$push) {
         update.$push = {};
@@ -235,36 +279,12 @@ MFS.prototype.trans_put = function(put, update, fields, ts) {
     for(var field in put) {
         put[field]._ts = ts;
         var content = put[field];
-        field = this.encoder.encode(field);
-        update.$push['f.' + field] = {$each: [{_ts:0, _dead:1}, content], $slice: -this.maxVers, $sort: {_ts:1}};
-        fields['f.' + field] = 1;
+        update.$push[this.mongoField(field)] = {$each: [{_ts:0, _dead:1}, content], $slice: -this.maxVers, $sort: {_ts:1}};
+        fields[this.mongoField(field)] = 1;
     }
     fields.m = 1;
     var self = this;
-    return function(path, doc, actions) {
-        var mappings = doc.m;
-        if(doc.f) {
-            for(var field in put) {
-                var content = put[field];
-                field = self.encoder.encode(field);
-                var vers = doc.f[field];
-                if(vers) {
-                    var latest = vers[vers.length - 1];
-                    if(latest._ts < content._ts) {
-                        arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
-                        arrayAppend(actions, self.createMappingActions('unmap', path + field, latest, mappings));
-                    }
-                } else {
-                    arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
-                }
-            }
-        } else if(mappings) {
-            for(var field in put) {
-                var content = put[field];
-                arrayAppend(actions, self.createMappingActions('map', path + field, content, mappings));
-            }
-        }
-    };
+    return function(path, doc, actions) {};
 };
 
 function arrayAppend(array, arrayToAppend) {
@@ -273,7 +293,7 @@ function arrayAppend(array, arrayToAppend) {
     }
 }
 
-MFS.prototype.throwFileNotFoundExeption = function(path) {
+MFS.prototype.throwFileNotFoundException = function(path) {
     var err = new Error('File not found: ' + path);
     err.fileNotFound = 1;
     throw err;
@@ -346,10 +366,9 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
     var self = this;
     return function(path, doc, result) {
         for(var i = 0; i < get.length; i++) {
-            var field = self.encoder.encode(get[i]);
-            if(!doc.f) continue;
-            if(!(field in doc.f)) continue;
-            var vers = doc.f[field];
+            var field = self.accessField(get[i], doc);
+	    if(!field) continue;
+            var vers = field;
             if(vers.length == 0) throw new Error('Zero versions left for file ' + field);
             var content = vers[vers.length - 1];
             if(content._dead) continue;
@@ -358,31 +377,9 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
     };
 };
 
-MFS.prototype.trans_getDir = function(options, update, fields, ts) {
-    fields.f = 1;
-    var self = this;
-    return function(path, doc, result) {
-        var fields = doc.f;
-        if(!fields) return;
-        for(var key in fields) {
-	    result[self.encoder.decode(key)] = 1;
-            var vers = fields[key];
-            if(Array.isArray(vers)) {
-                if(vers.length == 0) throw new Error('No versions for ' + path);
-                var content = vers[vers.length - 1];
-                if(content._dead) continue;
-                if(options.expandFiles) {
-                    result[self.encoder.decode(key)] = content;
-                }
-	    }
-        }
-    }
-};
-
 MFS.prototype.trans_tsCond = function(tsCond, update, fields, ts, query) {
     for(var key in tsCond) {
-        var key = this.encoder.encode(key);
-        query['f.' + key + '._ts'] = tsCond[key];
+        query[this.mongoField(key) + '._ts'] = tsCond[key];
     }
     return function(path, doc, actions) {}
 };
@@ -392,20 +389,19 @@ MFS.prototype.trans_accum = function(accum, update, fields, ts, query) {
         update.$inc = {};
     }
     for(var key in accum) {
-        var encKey = this.encoder.encode(key);
-        update.$inc['f.' + encKey] = accum[key];
-        fields['f.' + encKey] = 1;
+        update.$inc[this.mongoField(key)] = accum[key];
+        fields[this.mongoField(key)] = 1;
     }
     var self = this;
     return function(path, doc, result) {
         for(var key in accum) {
-            var field = self.encoder.encode(key);
-            if(!doc.f) continue;
-            var content = 0;
-            if(field in doc.f) {
-		content = doc.f[field];
-            }
-            result[key] = content;
+	    var field = self.accessField(key, doc);
+	    if(field) {
+		if(typeof(field) != 'number') throw new Error('Field ' + key + ' is not a number');
+		result[key] = field;
+	    } else {
+		result[key] = 0;
+	    }
         }
     };
 };
@@ -415,19 +411,20 @@ MFS.prototype.trans_accumReset = function(accumReset, update, fields, ts, query)
         update.$unset = {};
     }
     for(var i = 0; i < accumReset.length; i++) {
-        var encKey = this.encoder.encode(accumReset[i]);
-        update.$unset['f.' + encKey] = 0;
-        fields['f.' + encKey] = 1;
+        var key = accumReset[i];
+        update.$unset[this.mongoField(key)] = 0;
+        fields[this.mongoField(key)] = 1;
     }
     var self = this;
     return function(path, doc, result) {
         for(var i = 0; i < accumReset.length; i++) {
 	    var key = accumReset[i];
-            var field = self.encoder.encode(key);
-            if(!doc.f) continue;
-            if(!(field in doc.f)) continue;
-            var content = doc.f[field];
-	    result[key] = content;
+            var field = self.accessField(key, doc);
+	    if(field) {
+		result[key] = field;
+	    } else {
+		result[key] = 0;
+	    }
         }
     };
 };
