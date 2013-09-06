@@ -313,8 +313,9 @@ util.seq([
 		    assert.deepEqual(this.result._tasks, [
 			{type: 'map',                  // A mapping
 			 path: '/a/b/bar.json',        // Path to the .json file
-			 map: {m:1, _ts: '0100'},  // The content of the .map file
+			 map: {m:1, _ts: '0100'},      // The content of the .map file
 			 content: {x:1, _ts: '0101'},  // The content of the .json file
+			 _ts: '0101',                  // The timestamp of the transaction triggerring the mapping   
 			}
 		    ]);
 		    _();
@@ -332,9 +333,9 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', put: {'x.json': {x:1}}, _ts: '0101'}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
-			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:1, _ts: '0100'}},
-			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:2, _ts: '0100'}},
-			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:3, _ts: '0100'}},
+			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:1, _ts: '0100'}, _ts: '0101'},
+			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:2, _ts: '0100'}, _ts: '0101'},
+			{type: 'map', path: '/a/b/x.json', content: {x:1, _ts: '0101'}, map: {m:3, _ts: '0100'}, _ts: '0101'},
 		    ]);
 		    _();
 		},
@@ -351,9 +352,9 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', put: {'m..map': {m:1}}, _ts: '0101'}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
-			{type: 'map', path: '/a/b/1.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0101'}},
-			{type: 'map', path: '/a/b/2.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0101'}},
-			{type: 'map', path: '/a/b/3.json', content: {x:3, _ts: '0100'}, map: {m:1, _ts: '0101'}},
+			{type: 'map', path: '/a/b/1.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0101'}, _ts: '0101'},
+			{type: 'map', path: '/a/b/2.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0101'}, _ts: '0101'},
+			{type: 'map', path: '/a/b/3.json', content: {x:3, _ts: '0100'}, map: {m:1, _ts: '0101'}, _ts: '0101'},
 		    ]);
 		    _();
 		},
@@ -430,12 +431,12 @@ util.seq([
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
 			// Unmap old content (b.map)
-			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}},
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'},
 			// Map new content (b.map)
-			{type: 'map', path: '/a/b/a.json', content: {x:2, _ts: '0200'}, map: {m:1, _ts: '0100'}},
+			{type: 'map', path: '/a/b/a.json', content: {x:2, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '0200'},
 			// c.map
-			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0100'}},
-			{type: 'map', path: '/a/b/a.json', content: {x:2, _ts: '0200'}, map: {m:2, _ts: '0100'}},
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0100'}, _ts: '0200'},
+			{type: 'map', path: '/a/b/a.json', content: {x:2, _ts: '0200'}, map: {m:2, _ts: '0100'}, _ts: '0200'},
 		    ]);
 		    _();
 		},
@@ -453,12 +454,12 @@ util.seq([
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
 			// Unmap old content (a.json)
-			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}},
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'},
 			// Map new content (a.json)
-			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0200'}},
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0200'}, _ts: '0200'},
 			// b.json
-			{type: 'unmap', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0100'}},
-			{type: 'map', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:2, _ts: '0200'}},
+			{type: 'unmap', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'},
+			{type: 'map', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:2, _ts: '0200'}, _ts: '0200'},
 		    ]);
 		    _();
 		},
@@ -475,7 +476,22 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', remove: ['a.json'], _ts: '0200'}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
-			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}}
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'}
+		    ]);
+		    _();
+		},
+], done)();
+```
+
+should create an unmap task for each removed .map file, for each existing .json file.
+
+```js
+util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.map': {m:1}}, _ts: '0100'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', remove: ['b.map'], _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'}
 		    ]);
 		    _();
 		},

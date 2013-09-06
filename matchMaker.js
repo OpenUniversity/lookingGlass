@@ -44,12 +44,14 @@ exports.MatchMaker = function(storage) {
 				createTask(result, {type: 'unmap',
 						    path: trans.path + key,
 						    content: result[key],
-						    map: result[resultKey]});
+						    map: result[resultKey],
+						    _ts: trans._ts});
 			    }
 			    createTask(result, {type: 'map',
 						path: trans.path + key,
 						content: putCmd[key],
-						map: result[resultKey]});
+						map: result[resultKey],
+						_ts: trans._ts});
 			}
 		    }
 		} else if(endsWith(key, '.map')) {
@@ -59,12 +61,14 @@ exports.MatchMaker = function(storage) {
 				createTask(result, {type: 'unmap',
 						    path: trans.path + resultKey,
 						    content: result[resultKey],
-						    map: result[key]});
+						    map: result[key],
+						    _ts: trans._ts});
 			    }
 			    createTask(result, {type: 'map',
 						path: trans.path + resultKey,
 						content: result[resultKey],
-						map: putCmd[key]});
+						map: putCmd[key],
+						_ts: trans._ts});
 			}
 			if(endsWith(resultKey, '.d')) {
 			    var put = {};
@@ -86,6 +90,9 @@ exports.MatchMaker = function(storage) {
 	    if(endsWith(key, '.json')) {
 		addToGet(trans, '*.map');
 		addToGet(trans, key);
+	    } else if(endsWith(key, '.map')) {
+		addToGet(trans, '*.json');
+		addToGet(trans, key);
 	    }
 	}
 	return function(result) {
@@ -97,7 +104,18 @@ exports.MatchMaker = function(storage) {
 			    createTask(result, {type: 'unmap',
 						path: trans.path + key,
 						content: result[key],
-						map: result[resultKey]});
+						map: result[resultKey],
+						_ts: trans._ts});
+			}
+		    }
+		} else if(endsWith(key, '.map')) {
+		    for(var resultKey in result) {
+			if(endsWith(resultKey, '.json')) {
+			    createTask(result, {type: 'unmap',
+						path: trans.path + resultKey,
+						content: result[resultKey],
+						map: result[key],
+						_ts: trans._ts});
 			}
 		    }
 		}
