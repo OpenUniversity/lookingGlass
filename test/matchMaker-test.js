@@ -80,8 +80,52 @@ describe('MatchMaker', function() {
 		},
 	    ], done)();
 	});
-	it.skip('should create a _tramp entry in the result with entries for each subdirectory, to propagate .map files', function(done) {
-	    
+	it('should increment a counter (dir_exists) in the directory, so that it is only zero if the directory is new', function(done) {
+	    util.seq([
+		// If we add an element to a new directory
+		function(_) { mm.transaction({path: '/new/dir/', put:{a:{}}}, _); },
+		// and query its dir_exists accumulator,
+		function(_) { mm.transaction({path: '/new/dir/', accum: {dir_exists:0}}, _.to('result')); },
+		// we should get a value of 1, because there was one transaction on it.
+		function(_) { assert.equal(this.result.dir_exists, 1); _(); },
+		// If we query the accumulator on a directory that does not exist,
+		function(_) { mm.transaction({path: '/new/dir2/', accum: {dir_exists:0}}, _.to('result')); },
+		// we get 0
+		function(_) { assert.equal(this.result.dir_exists, 0); _(); },
+	    ], done)();
+	});
+	it('should create a transaction entry in the _tramp field of the result to add a .d entry in the parent directory if the directory is new', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}}, _.to('result')); },
+		function(_) { assert.deepEqual(this.result._tramp, [
+		    {path: '/new/', put: {'dir.d': {}}}
+		]); _(); },
+		
+	    ], done)();
+	});
+	it('should create a _tramp entry for each subdirectory, to propagate .map files up', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/a/b/c/', put: {g:{}, h:{}}}, _.to('c')); },
+		function(_) { trampoline(this.c._tramp, _); },
+		function(_) { mm.transaction({path: '/a/b/d/', put: {g:{}, h:{}}}, _.to('d')); },
+		function(_) { trampoline(this.d._tramp, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}}, _ts: '0100'}, _.to('result')); },
+		function(_) { assert.deepEqual(this.result._tramp, [
+		    {path: '/a/b/c/', put: {'foo.map': {m:1, _ts:'0100'}}, _ts: '0100'},
+		    {path: '/a/b/d/', put: {'foo.map': {m:1, _ts:'0100'}}, _ts: '0100'},
+		]); _(); },
+		
+	    ], done)();
+	    function trampoline(input, callback) {
+		if(!input || !input.length) {
+		    return callback();
+		}
+		mm.transaction(input[0], util.protect(callback, function(err, result) {
+		    var next = input.slice(1);
+		    if(result._tramp) next = next.concat(result._tramp);
+		    trampoline(next, callback);
+		}));
+	    }
 	});
     });
 });

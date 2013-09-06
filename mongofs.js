@@ -42,33 +42,6 @@ MFS.prototype.put = function(path, content, callback) {
     this.transaction(trans, callback);
 };
 
-MFS.prototype.ensureParent = function(path, callback) {
-    if(path == '/') {
-        return callback(undefined, []);
-    }
-    var parsed = util.parsePath(path.substr(0, path.length - 1));
-    var proj = {};
-    proj[this.mongoField(parsed.fileName)] = 1;
-    proj.m = 1;
-    var update = {$set: {}};
-    update.$set[this.mongoField(parsed.fileName) + '/'] = 1;
-    var self = this;
-    this.coll.findAndModify({_id: parsed.dirPath}, {_id: 1}, update, {upsert: true, fields: proj}, util.protect(callback, function(err, doc) {
-        var actions = [];
-        if(doc) {
-            // parent directory exists
-            if(doc.m) {
-                for(var key in doc.m) {
-                    actions.push({type: 'tramp', map: doc.m[key], path: path, _ts: key});
-                }
-            }
-            callback(undefined, actions);
-        } else {
-            self.ensureParent(parsed.dirPath, callback);
-        }
-    }));
-};
-
 function batchPutKeys(self, keys, keyVals, callback) {
     if(keys.length == 0) {
         return callback();
@@ -160,22 +133,14 @@ MFS.prototype.transaction = function(trans, callback) {
     removeSubFieldsOfExistingFields(fields);
     var self = this;
     var post = util.protect(callback, function(err, doc) {
-        var dirDoesNotExist = false;
         if(!doc || !doc._id) {
-            dirDoesNotExist = true;
             doc = {};
         }
 	var result = {};
         for(var i = 0; i < postMethods.length; i++) {
             postMethods[i](trans.path, doc, result);
         }
-        if(dirDoesNotExist) {
-            self.ensureParent(trans.path, util.protect(callback, function(err, parentResult) {
-                callback(undefined, result); // TODO: something with parentResult
-            }));
-        } else {
-            callback(undefined, result);
-        }
+        callback(undefined, result);
     });
     if(hasFields(update)) {
         this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.tsCond?false:true), fields: fields}, post);
