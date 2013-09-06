@@ -26,6 +26,7 @@ exports.MatchMaker = function(storage) {
 	for(var key in putCmd) {
 	    if(endsWith(key, '.json')) {
 		addToGet(trans, '*.map');
+		addToGet(trans, key);
 	    } else if(endsWith(key, '.map')) {
 		addToGet(trans, '*.json');
 		addToGet(trans, '*.d');
@@ -38,6 +39,12 @@ exports.MatchMaker = function(storage) {
 		if(endsWith(key, '.json')) {
 		    for(var resultKey in result) {
 			if(endsWith(resultKey, '.map')) {
+			    if(key in result) {
+				createTask(result, {type: 'unmap',
+						    path: trans.path + key,
+						    content: result[key],
+						    map: result[resultKey]});
+			    }
 			    createTask(result, {type: 'map',
 						path: trans.path + key,
 						content: putCmd[key],
