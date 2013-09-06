@@ -131,7 +131,7 @@ describe('MatchMaker', function() {
 		}));
 	    }
 	});
-	it('should create an unmap task for the old content of a file when modifying an existing file', function(done) {
+	it('should create an unmap task for the old content of a file when modifying an existing .json file', function(done) {
 	    util.seq([
 		// Create the initial content and two .map files
 		function(_) { mm.transaction({path:'/a/b/', put:{'a.json': {x:1}, 'b.map': {m:1}, 'c.map': {m:2}}, _ts: '0100'}, _); },
@@ -146,6 +146,26 @@ describe('MatchMaker', function() {
 			// c.map
 			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0100'}},
 			{type: 'map', path: '/a/b/a.json', content: {x:2, _ts: '0200'}, map: {m:2, _ts: '0100'}},
+		    ]);
+		    _();
+		},
+	    ], done)();
+	});
+	it('should create an unmap task for the old content of a file when modifying an existing .map file', function(done) {
+	    util.seq([
+		// Create the initial content and .map file
+		function(_) { mm.transaction({path:'/a/b/', put:{'a.json': {x:1}, 'b.json': {x:2}, 'c.map': {m:1}}, _ts: '0100'}, _); },
+		// Modify the .map file
+		function(_) { mm.transaction({path: '/a/b/', put:{'c.map': {m:2}}, _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			// Unmap old content (a.json)
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}},
+			// Map new content (a.json)
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:2, _ts: '0200'}},
+			// b.json
+			{type: 'unmap', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0100'}},
+			{type: 'map', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:2, _ts: '0200'}},
 		    ]);
 		    _();
 		},

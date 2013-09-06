@@ -23,7 +23,8 @@
     MatchMaker put should increment a counter (dir_exists) in the directory, so that it is only zero if the directory is new: [2K[0G  ․ MatchMaker put should increment a counter (dir_exists) in the directory, so that it is only zero if the directory is new
     MatchMaker put should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new: [2K[0G  ․ MatchMaker put should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new
     MatchMaker put should create a task for each subdirectory, to propagate .map files up: [2K[0G  ․ MatchMaker put should create a task for each subdirectory, to propagate .map files up
-    MatchMaker put should create an unmap task for the old content of a file when modifying an existing file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing file
+    MatchMaker put should create an unmap task for the old content of a file when modifying an existing .json file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing .json file
+    MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file
     MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*)
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value
@@ -78,6 +79,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  47 passing (615 ms)
+  48 passing (610 ms)
   31 pending
 

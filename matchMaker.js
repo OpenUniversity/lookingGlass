@@ -30,6 +30,7 @@ exports.MatchMaker = function(storage) {
 	    } else if(endsWith(key, '.map')) {
 		addToGet(trans, '*.json');
 		addToGet(trans, '*.d');
+		addToGet(trans, key);
 	    }
 	}
 	return function(result) {
@@ -54,6 +55,12 @@ exports.MatchMaker = function(storage) {
 		} else if(endsWith(key, '.map')) {
 		    for(var resultKey in result) {
 			if(endsWith(resultKey, '.json')) {
+			    if(key in result) {
+				createTask(result, {type: 'unmap',
+						    path: trans.path + resultKey,
+						    content: result[resultKey],
+						    map: result[key]});
+			    }
 			    createTask(result, {type: 'map',
 						path: trans.path + resultKey,
 						content: result[resultKey],
