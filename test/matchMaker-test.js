@@ -3,6 +3,7 @@ var MFS = require('../mongofs.js').MFS;
 var util = require('../util.js');
 var assert = require('assert');
 
+
 describe('MatchMaker', function() {
     var storage;
     var coll;
@@ -30,6 +31,19 @@ describe('MatchMaker', function() {
 	    },
 	], done)();
     });
+
+    function trampoline(input, callback) {
+	if(!input || !input.length) {
+	    return callback();
+	}
+	assert.equal(input[0].type, 'transaction');
+	mm.transaction(input[0], util.protect(callback, function(err, result) {
+	    var next = input.slice(1);
+	    if(result._tramp) next = next.concat(result._tasks);
+	    trampoline(next, callback);
+	}));
+    }
+
     describe('put', function() {
 	it('should add a _tasks entry to the result, containing a list of mappings', function(done) {
 	    util.seq([
@@ -195,6 +209,24 @@ describe('MatchMaker', function() {
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
 			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}, _ts: '0200'}
+		    ]);
+		    _();
+		},
+	    ], done)();	
+	});
+	it('should create transaction tasks to remove .map files from child directories, when a .map file is removed', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/a/b/c/', put: {foo: {}}, _ts: '0100'}, _.to('r1')); },
+		function(_) { trampoline(this.r1._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/d/', put: {foo: {}}, _ts: '0101'}, _.to('r2')); },
+		function(_) { trampoline(this.r2._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.map': {m:1}}, _ts: '0102'}, _.to('r3')); },
+		function(_) { trampoline(this.r3._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/', remove: ['a.map'], _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'transaction', path: '/a/b/c/', remove: ['a.map'], _ts: '0200'},
+			{type: 'transaction', path: '/a/b/d/', remove: ['a.map'], _ts: '0200'},
 		    ]);
 		    _();
 		},

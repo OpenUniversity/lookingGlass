@@ -92,6 +92,7 @@ exports.MatchMaker = function(storage) {
 		addToGet(trans, key);
 	    } else if(endsWith(key, '.map')) {
 		addToGet(trans, '*.json');
+		addToGet(trans, '*.d');
 		addToGet(trans, key);
 	    }
 	}
@@ -115,6 +116,11 @@ exports.MatchMaker = function(storage) {
 						path: trans.path + resultKey,
 						content: result[resultKey],
 						map: result[key],
+						_ts: trans._ts});
+			} else if(endsWith(resultKey, '.d')) {
+			    createTask(result, {type: 'transaction',
+						path: trans.path + resultKey.replace(/\.d$/, '/'),
+						remove: [key],
 						_ts: trans._ts});
 			}
 		    }

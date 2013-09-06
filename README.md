@@ -500,6 +500,27 @@ util.seq([
 ], done)();
 ```
 
+should create transaction tasks to remove .map files from child directories, when a .map file is removed.
+
+```js
+util.seq([
+		function(_) { mm.transaction({path: '/a/b/c/', put: {foo: {}}, _ts: '0100'}, _.to('r1')); },
+		function(_) { trampoline(this.r1._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/d/', put: {foo: {}}, _ts: '0101'}, _.to('r2')); },
+		function(_) { trampoline(this.r2._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.map': {m:1}}, _ts: '0102'}, _.to('r3')); },
+		function(_) { trampoline(this.r3._tasks, _); },
+		function(_) { mm.transaction({path: '/a/b/', remove: ['a.map'], _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'transaction', path: '/a/b/c/', remove: ['a.map'], _ts: '0200'},
+			{type: 'transaction', path: '/a/b/d/', remove: ['a.map'], _ts: '0200'},
+		    ]);
+		    _();
+		},
+], done)();
+```
+
 <a name="mongofs"></a>
 # MongoFS
 <a name="mongofs-as-storagedriver"></a>

@@ -27,6 +27,7 @@
     MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file
     MatchMaker remove should create an unmap task for each removed .json file, for each existing .map file: [2K[0G  ․ MatchMaker remove should create an unmap task for each removed .json file, for each existing .map file
     MatchMaker remove should create an unmap task for each removed .map file, for each existing .json file: [2K[0G  ․ MatchMaker remove should create an unmap task for each removed .map file, for each existing .json file
+    MatchMaker remove should create transaction tasks to remove .map files from child directories, when a .map file is removed: [2K[0G  ․ MatchMaker remove should create transaction tasks to remove .map files from child directories, when a .map file is removed
     MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*)
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value
@@ -81,6 +82,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  50 passing (620 ms)
+  51 passing (614 ms)
   31 pending
 
