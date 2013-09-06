@@ -81,6 +81,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  50 passing (599 ms)
+  50 passing (620 ms)
   31 pending
 
