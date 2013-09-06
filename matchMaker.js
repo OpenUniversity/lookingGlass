@@ -79,6 +79,31 @@ exports.MatchMaker = function(storage) {
 	    }
 	};
     };
+    this.handle_remove = function(trans, remove) {
+	var removeCmd = trans[remove];
+	for(var i = 0; i < removeCmd.length; i++) {
+	    var key = removeCmd[i];
+	    if(endsWith(key, '.json')) {
+		addToGet(trans, '*.map');
+		addToGet(trans, key);
+	    }
+	}
+	return function(result) {
+	    for(var i = 0; i < removeCmd.length; i++) {
+		var key = removeCmd[i];
+		if(endsWith(key, '.json')) {
+		    for(var resultKey in result) {
+			if(endsWith(resultKey, '.map')) {
+			    createTask(result, {type: 'unmap',
+						path: trans.path + key,
+						content: result[key],
+						map: result[resultKey]});
+			}
+		    }
+		}
+	    }
+	};
+    };
     function endsWith(str, suffix) {
 	return str.substr(str.length - suffix.length) == suffix;
     }

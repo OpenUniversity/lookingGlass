@@ -172,4 +172,18 @@ describe('MatchMaker', function() {
 	    ], done)();
 	});
     });
+    describe('remove', function() {
+	it('should create an unmap task for each removed .json file, for each existing .map file', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.map': {m:1}}, _ts: '0100'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', remove: ['a.json'], _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}}
+		    ]);
+		    _();
+		},
+	    ], done)();	
+	});
+    });
 });

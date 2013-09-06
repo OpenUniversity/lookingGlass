@@ -11,6 +11,7 @@
    - [jsMapper](#jsmapper)
    - [MatchMaker](#matchmaker)
      - [put](#matchmaker-put)
+     - [remove](#matchmaker-remove)
    - [MongoFS](#mongofs)
      - [as StorageDriver](#mongofs-as-storagedriver)
        - [.transaction(trans, callback(err, result))](#mongofs-as-storagedriver-transactiontrans-callbackerr-result)
@@ -458,6 +459,23 @@ util.seq([
 			// b.json
 			{type: 'unmap', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:1, _ts: '0100'}},
 			{type: 'map', path: '/a/b/b.json', content: {x:2, _ts: '0100'}, map: {m:2, _ts: '0200'}},
+		    ]);
+		    _();
+		},
+], done)();
+```
+
+<a name="matchmaker-remove"></a>
+## remove
+should create an unmap task for each removed .json file, for each existing .map file.
+
+```js
+util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.map': {m:1}}, _ts: '0100'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', remove: ['a.json'], _ts: '0200'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'unmap', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0100'}}
 		    ]);
 		    _();
 		},
