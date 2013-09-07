@@ -27,12 +27,8 @@
          - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accum)
          - [accumReset](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accumreset)
    - [Dispatcher](#dispatcher)
-     - [.transaction(trans, callback(err, actions))](#dispatcher-transactiontrans-callbackerr-actions)
-     - [.tick(path, callback(err, job))](#dispatcher-tickpath-callbackerr-job)
-     - [tock(job, callback(err))](#dispatcher-tockjob-callbackerr)
-     - [.start() and .stop()](#dispatcher-start-and-stop)
-     - [.wait(ts, callback(err))](#dispatcher-waitts-callbackerr)
-     - [mapping](#dispatcher-mapping)
+     - [transaction(trans, callback(err, result))](#dispatcher-transactiontrans-callbackerr-result)
+     - [dispatch(task, callback(err, tasks))](#dispatcher-dispatchtask-callbackerr-tasks)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
      - [PUT](#lookingglass-restful-api-put)
@@ -846,18 +842,36 @@ util.seq([
 
 <a name="dispatcher"></a>
 # Dispatcher
-<a name="dispatcher-transactiontrans-callbackerr-actions"></a>
-## .transaction(trans, callback(err, actions))
-<a name="dispatcher-tickpath-callbackerr-job"></a>
-## .tick(path, callback(err, job))
-<a name="dispatcher-tockjob-callbackerr"></a>
-## tock(job, callback(err))
-<a name="dispatcher-start-and-stop"></a>
-## .start() and .stop()
-<a name="dispatcher-waitts-callbackerr"></a>
-## .wait(ts, callback(err))
-<a name="dispatcher-mapping"></a>
-## mapping
+<a name="dispatcher-transactiontrans-callbackerr-result"></a>
+## transaction(trans, callback(err, result))
+should proxy transactions to the underlying layer.
+
+```js
+util.seq([
+		function(_) { disp.transaction({path: '/a/b/', put: {c: {x:1}}, _ts: '0100'}, _); },
+		function(_) { disp.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result.c, {x:1, _ts: '0100'});
+		    _();
+		},
+], done)();
+```
+
+<a name="dispatcher-dispatchtask-callbackerr-tasks"></a>
+## dispatch(task, callback(err, tasks))
+should handle "transaction" tasks by performing a transaction on the storage.
+
+```js
+util.seq([
+		function(_) { disp.dispatch({type: 'transaction', path: '/a/b/', put: {c: {x:1}}, _ts: '0100'}, _); },
+		function(_) { storage.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result.c, {x:1, _ts: '0100'});
+		    _();
+		},
+], done)();
+```
+
 <a name="mirrormapper"></a>
 # MirrorMapper
 should returns content objects identical to the source, except changing the path.

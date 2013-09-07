@@ -57,21 +57,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should create files containing numbers, when given names that do not exist: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should create files containing numbers, when given names that do not exist
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should add the given number to each file, and emit the previous value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accum should add the given number to each file, and emit the previous value
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) accumReset should reset the given accumulators, so that subsequent reads receive 0: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) accumReset should reset the given accumulators, so that subsequent reads receive 0
-  - Dispatcher .transaction(trans, callback(err, actions)) should handle transactions that do not require futher action by forwaring them to storage
-  - Dispatcher .transaction(trans, callback(err, actions)) should write actions that require further treatment to the tracker, in a path provided by the scheduler
-  - Dispatcher .tick(path, callback(err, job)) should select a pending task from the tracker, mark it in progress and emit it in the callback
-  - Dispatcher .tick(path, callback(err, job)) should select a different job on each call
-  - Dispatcher .tick(path, callback(err, job)) should emit undefined as a job if no job is found
-  - Dispatcher .tick(path, callback(err, job)) should take the path from the scheduler if not provided
-  - Dispatcher tock(job, callback(err)) should perform the given job
-  - Dispatcher .start() and .stop() should cause the dispatcher to automatically take tasks and execute them
-  - Dispatcher .wait(ts, callback(err)) should trigger the callback after all work related to this ts has been complete
-  - Dispatcher mapping should handle map operations with _mapping fields containing HTTP URLs by redirecting them to RESTful mappers
-  - Dispatcher mapping should handle map operations with _mapping="mirror" by mirrorring data
-  - Dispatcher mapping should handle unmap operations by removing mirrored data
-  - Dispatcher mapping should support the javascript mapper
-  - Dispatcher mapping should treat mapping results for which the path is a directory, as new mappings
-  - Dispatcher mapping should unmap when a file creating a mapping, is removed
+    Dispatcher transaction(trans, callback(err, result)) should proxy transactions to the underlying layer: [2K[0G  ․ Dispatcher transaction(trans, callback(err, result)) should proxy transactions to the underlying layer
+    Dispatcher dispatch(task, callback(err, tasks)) should handle "transaction" tasks by performing a transaction on the storage: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) should handle "transaction" tasks by performing a transaction on the storage
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
   - lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them
   - lookingGlass RESTful API PUT should accept data of any content type
@@ -82,6 +69,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  51 passing (614 ms)
-  31 pending
+  53 passing (635 ms)
+  16 pending
 
