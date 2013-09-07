@@ -1,5 +1,5 @@
 exports.map = function(action, callback){
-    var mapping = action.mapping;
+    var mapping = action.map;
     var actions = [];
     function emit(path, content) {
         actions.push({type: 'content', path: path, content: content});

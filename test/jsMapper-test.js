@@ -9,7 +9,7 @@ describe('jsMapper', function() {
         var mapping = {func: mappingFunction.toString()};
         jsMapper.map({
             type: 'map',
-            mapping: mapping,
+            map: mapping,
             content: {foo: 'bar'},
             path: '/a/b/c',
         }, function(err, list) {
@@ -25,7 +25,7 @@ describe('jsMapper', function() {
         var mapping = {func: mappingFunction.toString()};
         jsMapper.map({
             type: 'map',
-            mapping: mapping,
+            map: mapping,
             content: {foo: 'bar'},
             path: '/a/b/c',
         }, function(err, list) {
@@ -42,7 +42,7 @@ describe('jsMapper', function() {
         var mapping = {func: mappingFunction.toString()};
         jsMapper.map({
             type: 'map',
-            mapping: mapping,
+            map: mapping,
             content: {foo: 'bar'},
             path: '/a/b/c',
         }, function(err, list) {

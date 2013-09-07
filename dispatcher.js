@@ -1,6 +1,6 @@
 var util = require('./util.js');
 
-exports.Dispatcher = function(storage) {
+exports.Dispatcher = function(storage, mappers) {
     this.transaction = function(trans, callback) {
 	storage.transaction(trans, callback);
     }
@@ -18,4 +18,24 @@ exports.Dispatcher = function(storage) {
 	    }
 	}));
     }
+    this.do_map = function(task, callback) {
+	var mapperName = task.map._mapper;
+	if(!mapperName) throw new Error('No mapper in mapping: ' + JSON.stringify(task.map));
+	var mapper = mappers[mapperName];
+	if(!mapper) throw new Error('Invalid mapper: ' + mapperName);
+	mapper.map(task, util.protect(callback, function(err, list) {
+	    var tasks = []
+	    for(var i = 0; i < list.length; i++) {
+		var entry = list[i];
+		var parsed = util.parsePath(entry.path);
+		var put = {};
+		put[parsed.fileName] = entry.content;
+		tasks.push({type: 'transaction',
+			    path: parsed.dirPath,
+			    put: put,
+			    _ts: task._ts});
+	    }
+	    callback(undefined, tasks);
+	}));
+    };
 };

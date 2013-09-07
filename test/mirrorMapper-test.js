@@ -20,7 +20,7 @@ describe('MirrorMapper', function() {
         util.seq([
             function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/mirror', {
                 type: 'map',
-                mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
+                map: {origPath: '/a/b/', newPath: '/X/Y/'},
                 path: '/a/b/c/d',
                 content: {foo: 'bar'},
             }, _.to('status', 'headers', 'response')); },

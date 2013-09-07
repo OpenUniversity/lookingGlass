@@ -29,6 +29,8 @@
    - [Dispatcher](#dispatcher)
      - [transaction(trans, callback(err, result))](#dispatcher-transactiontrans-callbackerr-result)
      - [dispatch(task, callback(err, tasks))](#dispatcher-dispatchtask-callbackerr-tasks)
+       - [transaction](#dispatcher-dispatchtask-callbackerr-tasks-transaction)
+       - [map](#dispatcher-dispatchtask-callbackerr-tasks-map)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
      - [PUT](#lookingglass-restful-api-put)
@@ -225,7 +227,7 @@ mappingFunction = function() {
 var mapping = {func: mappingFunction.toString()};
 jsMapper.map({
     type: 'map',
-    mapping: mapping,
+    map: mapping,
     content: {foo: 'bar'},
     path: '/a/b/c',
 }, function(err, list) {
@@ -244,7 +246,7 @@ mappingFunction = function(path, content) {
 var mapping = {func: mappingFunction.toString()};
 jsMapper.map({
     type: 'map',
-    mapping: mapping,
+    map: mapping,
     content: {foo: 'bar'},
     path: '/a/b/c',
 }, function(err, list) {
@@ -264,7 +266,7 @@ mappingFunction = function(path, content) {
 var mapping = {func: mappingFunction.toString()};
 jsMapper.map({
     type: 'map',
-    mapping: mapping,
+    map: mapping,
     content: {foo: 'bar'},
     path: '/a/b/c',
 }, function(err, list) {
@@ -859,17 +861,57 @@ util.seq([
 
 <a name="dispatcher-dispatchtask-callbackerr-tasks"></a>
 ## dispatch(task, callback(err, tasks))
+<a name="dispatcher-dispatchtask-callbackerr-tasks-transaction"></a>
+### transaction
 should handle "transaction" tasks by performing a transaction on the storage.
 
 ```js
 util.seq([
-		function(_) { disp.dispatch({type: 'transaction', path: '/a/b/', put: {c: {x:1}}, _ts: '0100'}, _); },
-		function(_) { storage.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
-		function(_) {
-		    assert.deepEqual(this.result.c, {x:1, _ts: '0100'});
-		    _();
-		},
+    function(_) { disp.dispatch({type: 'transaction', path: '/a/b/', put: {c: {x:1}}, _ts: '0100'}, _); },
+    function(_) { storage.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+    function(_) {
+	assert.deepEqual(this.result.c, {x:1, _ts: '0100'});
+	_();
+    },
 ], done)();
+```
+
+should return any further tasks.
+
+```js
+util.seq([
+    function(_) { disp.dispatch({type: 'transaction', path: '/a/b/', put: {'a.json': {x:1}}, _ts: '0100'}, _); },
+    function(_) { disp.dispatch({type: 'transaction', path: '/a/b/', put: {'b.map': {m:1}}, _ts: '0101'}, _.to('tasks')); },
+    function(_) {
+	assert.deepEqual(this.tasks, [
+	    {type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0100'}, map: {m:1, _ts: '0101'}, _ts: '0101X'},
+	]);
+	_();
+    },
+], done)();
+```
+
+<a name="dispatcher-dispatchtask-callbackerr-tasks-map"></a>
+### map
+should be referred to the corresponding mapper, returning transactions with put operations.
+
+```js
+disp.dispatch({type: 'map',
+	       path: '/a/b/c',
+	       content: {foo: 'bar'},
+	       map: {_mapper: 'mirror',
+		     origPath: '/a/b/',
+		     newPath: '/P/Q/'},
+	       _ts: '0123'}, 
+	      util.protect(done, function(err, tasks) {
+		  assert.deepEqual(tasks, [
+		      {type: 'transaction',
+		       path: '/P/Q/',
+		       put: {c: {foo: 'bar'}},
+		       _ts: '0123'}
+		  ]);
+		  done();
+	      }));
 ```
 
 <a name="mirrormapper"></a>
@@ -880,7 +922,7 @@ should returns content objects identical to the source, except changing the path
 util.seq([
     function(_) { util.httpJsonReq('POST', 'http://localhost:' + port + '/mirror', {
         type: 'map',
-        mapping: {origPath: '/a/b/', newPath: '/X/Y/'},
+        map: {origPath: '/a/b/', newPath: '/X/Y/'},
         path: '/a/b/c/d',
         content: {foo: 'bar'},
     }, _.to('status', 'headers', 'response')); },
