@@ -30,6 +30,7 @@
        - [unmap](#dispatcher-dispatchtask-callbackerr-tasks-unmap)
    - [Trampoline](#trampoline)
      - [transaction](#trampoline-transaction)
+     - [dispatch](#trampoline-dispatch)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
      - [PUT](#lookingglass-restful-api-put)
@@ -994,6 +995,52 @@ util.seq([
 		function(_) { tramp.transaction({path: '/a/b/', get: ['c.json']}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result['c.json'], {foo: 'bar', _ts: '0100'});
+		    _();
+		},
+		
+], done)();
+```
+
+should perform subsequent tasks before calling the callback, given the timeout is not exceeded.
+
+```js
+util.seq([
+		function(_) { tramp.transaction({path: '/a/b/', put: {'a.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { tramp.transaction({path: '/a/', put: {'b.map': {_mapper: 'mirror',
+										origPath: '/a/',
+										newPath: '/A/'}}, _ts: '0101'}, _); },
+		function(_) { tramp.transaction({path: '/A/b/', get: ['a.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['a.json'], {foo: 'bar', _ts: '0101X'}); _();
+		},
+		
+], done)();
+```
+
+<a name="trampoline-dispatch"></a>
+## dispatch
+should relay tasks to the underlying dispatcher.
+
+```js
+util.seq([
+		function(_) { tramp.dispatch({type: 'transaction', path: '/a/b/', put: {'c.json': {foo:'bar'}}, _ts: '0100'}, _); },
+		function(_) { tramp.transaction({path: '/a/b/', get: ['c.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['c.json'], {foo: 'bar', _ts: '0100'});
+		    _();
+		},
+		
+], done)();
+```
+
+should re-dispatch tasks returned from dispatched tasks, until no tasks are left, given it is done within the timeout.
+
+```js
+util.seq([
+		function(_) { tramp.dispatch({type: 'transaction', path: '/a/b/', put: {'c.json': {foo:'bar'}}, _ts: '0100'}, _); },
+		function(_) { tramp.transaction({path: '/a/', get: ['b.d']}, _.to('result')); },
+		function(_) {
+		    assert(this.result['b.d'], 'the directory entry must exist');
 		    _();
 		},
 		
