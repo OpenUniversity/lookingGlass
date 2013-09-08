@@ -26,7 +26,7 @@ describe('ClusterNode', function() {
             tracker = new MFS(collTracker, {maxVers: 1});
             disp = new Dispatcher(new MatchMaker(storage), mappers);
 	    if(trace) {
-		disp = new util.TracingDispatcher(disp, 'DISP');
+//		disp = new util.TracingDispatcher(disp, 'DISP');
 		tracker = new util.TracingDispatcher(tracker, 'TRACKER');
 	    }
 	    node1 = new ClusterNode(disp, tracker, 'node1');
@@ -67,7 +67,9 @@ describe('ClusterNode', function() {
 						    path: '/a/',
 						    put: {'b.d': {}},
 						    _ts: task._ts,
-						    _id: task._id});
+						    _id: task._id,
+						    _tracking: {path: '/node/node1/',
+								counter: '0100.counter'}});
 			    beenThere = true;
 			}
 		    }
@@ -92,13 +94,12 @@ describe('ClusterNode', function() {
 	it('should call the callback once all processing for the transaction associated with the tracking object is done', function(done) {
 	    node1.start();
 	    util.seq([
-		function(_) { this.t1 = node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _); },
-		function(_) { this.t2 = node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
+		function(_) { node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _.to('t1')); },
+		function(_) { node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
 									      origPath: '/a/',
-									      newPath: '/X/Y/'}}, _ts: '0200'}, _); },
+									      newPath: '/X/Y/'}}, _ts: '0200'}, _.to('t2')); },
 		function(_) { node1.wait(this.t1, _); },
 		function(_) { node1.wait(this.t2, _); },
-		function(_) { setTimeout(_, 1000); },
 		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200X'});

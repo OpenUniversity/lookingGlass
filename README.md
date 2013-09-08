@@ -1080,7 +1080,9 @@ util.seq([
 						    path: '/a/',
 						    put: {'b.d': {}},
 						    _ts: task._ts,
-						    _id: task._id});
+						    _id: task._id,
+						    _tracking: {path: '/node/node1/',
+								counter: '0100.counter'}});
 			    beenThere = true;
 			}
 		    }
@@ -1111,13 +1113,12 @@ should call the callback once all processing for the transaction associated with
 ```js
 node1.start();
 util.seq([
-		function(_) { this.t1 = node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _); },
-		function(_) { this.t2 = node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
+		function(_) { node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _.to('t1')); },
+		function(_) { node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
 									      origPath: '/a/',
-									      newPath: '/X/Y/'}}, _ts: '0200'}, _); },
+									      newPath: '/X/Y/'}}, _ts: '0200'}, _.to('t2')); },
 		function(_) { node1.wait(this.t1, _); },
 		function(_) { node1.wait(this.t2, _); },
-		function(_) { setTimeout(_, 1000); },
 		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200X'});

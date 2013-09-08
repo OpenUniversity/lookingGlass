@@ -1,4 +1,5 @@
 var util = require('./util.js');
+var assert = require('assert');
 
 exports.ClusterNode = function(disp, tracker, nodeID) {
     var self = this;
@@ -6,6 +7,7 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
     var worker = new util.Worker(tick, 10);
     var PENDING_EXT = '.pending';
     var WIP_EXT = '.wip';
+    var waitInterval = 20;
     this.stop = function() { worker.stop(); };
     this.start = function() { worker.start(); };
     this.transaction = function(trans, callback) {
@@ -13,7 +15,8 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    if(result._tasks) {
 		var tasks = result._tasks;
 		delete result._tasks;
-		replaceDoneWithNewTasks(undefined, tasks, util.protect(callback, function() {
+		result._tracking = {path: trackerPath, counter: trans._ts + '.counter'};
+		replaceDoneWithNewTasks(undefined, tasks, result._tracking, util.protect(callback, function() {
 		    callback(undefined, result);
 		}));
 	    } else {
@@ -30,7 +33,7 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    function(_) { markTaskInProgress(this.task, _.to('result')); },
 	    function(_) { if(this.result[this.task._id + PENDING_EXT]) _(); else callback(); },
 	    function(_) { disp.dispatch(this.task, _.to('tasks')); },
-	    function(_) { replaceDoneWithNewTasks(this.task, this.tasks, _); },
+	    function(_) { replaceDoneWithNewTasks(this.task, this.tasks, this.task._tracking, _); },
 	], callback)();
     }
 
@@ -49,20 +52,38 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 			     put: put,
 			     getIfExists: [task._id + PENDING_EXT]}, callback);
     }
-    function replaceDoneWithNewTasks(doneTask, newTasks, callback) {
-	var trans = {path: trackerPath};
+    function replaceDoneWithNewTasks(doneTask, newTasks, tracking, callback) {
+	assert(tracking);
+	var trans = {path: trackerPath, accum: {}};
+	var counter = 0;
 	if(doneTask) {
 	    trans.remove = [doneTask._id + WIP_EXT];
+	    jobTS = doneTask._ts;
+	    counter--;
 	}
 	trans.put = {};
 	for(var i = 0; i < newTasks.length; i++) {
 	    var task = newTasks[i];
+	    task._tracking = tracking;
 	    task._id = util.timeUid();
 	    trans.put[task._id + PENDING_EXT] = {task: task};
+	    jobTS = task._ts;
+	    counter++;
 	}
+	trans.accum[tracking.counter] = counter;
 	tracker.transaction(trans, callback);
     }
-    this.wait = function(tracking, callback) {
-	callback();
+    this.wait = function(result, callback) {
+	if(!result._tracking) {
+	    return callback();
+	}
+	var trackingInfo = result._tracking;
+	var accum = {};
+	accum[trackingInfo.counter] = 0;
+	util.seq([
+	    function(_) { setTimeout(_, waitInterval); },
+	    function(_) { tracker.transaction({path: trackingInfo.path, accum: accum}, _.to('result')); },
+	    function(_) { if(this.result[trackingInfo.counter] > 0) self.wait(result, callback); else _(); },
+	], callback)();
     };
 };
