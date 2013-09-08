@@ -225,6 +225,19 @@ function describeStorageDriver(driverContainer) {
 		    ], done)();
 		});
             });
+	    describe('getLatest', function() {
+		it('should return the latest version of each file, regardless of the transaction timestamp', function(done) {
+		    util.seq([
+			function(_) { driver.transaction({path: '/foo/bar/', put: {x: {y:1}}, _ts: '0100'}, _); },
+			function(_) { driver.transaction({path: '/foo/bar/', put: {x: {y:2}}, _ts: '0200'}, _); },
+			function(_) { driver.transaction({path: '/foo/bar/', getLatest: ['x'], _ts: '0150'}, _.to('result')); },
+			function(_) {
+			    assert.equal(this.result['x:latest'].y, 2);
+			    _();
+			},
+		    ], done)();
+		});
+	    });
             describe('tsCond', function() {
                 it('should cause the transaction to be canceled if one of the given files does not have the corresponding ts value', function(done) {
                     util.seq([

@@ -41,60 +41,60 @@ exports.MatchMaker = function(storage) {
 	    for(var key in putCmd) {
 		if(endsWith(key, '.json')) {
 		    for(var resultKey in result) {
-			if(endsWith(resultKey, '.map')) {
+			var ts = maxTS(trans, result[resultKey]);
+			if(endsWith(resultKey, '.map:latest')) {
 			    if(key in result) {
 				createTask(result, {type: 'unmap',
 						    path: trans.path + key,
 						    content: result[key],
 						    map: result[resultKey],
-						    _ts: trans._ts});
+						    _ts: ts});
 			    }
 			    createTask(result, {type: 'map',
 						path: trans.path + key,
 						content: putCmd[key],
 						map: result[resultKey],
-						_ts: trans._ts + 'X'});
+						_ts: ts + 'X'});
 			}
 		    }
 		} else if(endsWith(key, '.map')) {
 		    for(var resultKey in result) {
-			if(endsWith(resultKey, '.json')) {
+			var ts = maxTS(trans, result[resultKey]);
+			if(endsWith(resultKey, '.json:latest')) {
 			    if(key in result) {
 				createTask(result, {type: 'unmap',
-						    path: trans.path + resultKey,
+						    path: trans.path + removeSuffix(resultKey, ':latest'),
 						    content: result[resultKey],
 						    map: result[key],
-						    _ts: trans._ts});
+						    _ts: ts});
 			    }
 			    createTask(result, {type: 'map',
-						path: trans.path + resultKey,
+						path: trans.path + removeSuffix(resultKey, ':latest'),
 						content: result[resultKey],
 						map: putCmd[key],
-						_ts: trans._ts + 'X'});
+						_ts: ts + 'X'});
 			}
-			if(endsWith(resultKey, '.d')) {
+			if(endsWith(resultKey, '.d:latest')) {
 			    var put = {};
 			    put[key] = putCmd[key];
 			    createTask(result, {type: 'transaction',
-						path: trans.path + resultKey.replace(/\.d$/, '/'),
+						path: trans.path + removeSuffix(resultKey, ':latest').replace(/\.d$/, '/'),
 						put: put,
-						_ts: trans._ts});
+						_ts: ts});
 			}
 		    }
 		} else if(endsWith(key, '.d')) {
-		    var putMaps = {};
 		    var foundMaps = false;
 		    for(var resultKey in result) {
-			if(endsWith(resultKey, '.map')) {
-			    putMaps[resultKey] = result[resultKey];
-			    foundMaps = true;
+			var ts = maxTS(trans, result[resultKey]);
+			if(endsWith(resultKey, '.map:latest')) {
+			    var putMaps = {};
+			    putMaps[removeSuffix(resultKey, ':latest')] = result[resultKey];
+			    createTask(result, {type: 'transaction',
+						path: trans.path + key.replace(/\.d$/, '/'),
+						put: putMaps,
+						_ts: ts});
 			}
-		    }
-		    if(foundMaps) {
-			createTask(result, {type: 'transaction',
-					    path: trans.path + key.replace(/\.d$/, '/'),
-					    put: putMaps,
-					    _ts: trans._ts});
 		    }
 		}
 	    }
@@ -150,8 +150,12 @@ exports.MatchMaker = function(storage) {
     }
     function addToGet(trans, value) {
 	if(!trans.getIfExists) trans.getIfExists = [];
+	if(!trans.getLatest) trans.getLatest = [];
 	if(trans.getIfExists.indexOf(value) < 0) {
 	    trans.getIfExists.push(value);
+	}
+	if(trans.getLatest.indexOf(value) < 0) {
+	    trans.getLatest.push(value);
 	}
     }
 
@@ -172,5 +176,11 @@ exports.MatchMaker = function(storage) {
     function createTask(result, task) {
 	if(!result._tasks) result._tasks = [];
 	result._tasks.push(task);
+    }
+    function maxTS(file1, file2) {
+	return (file1._ts > file2._ts) ? file1._ts : file2._ts;
+    }
+    function removeSuffix(str, suff) {
+	return str.substr(0, str.length - suff.length);
     }
 }

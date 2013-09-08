@@ -154,7 +154,8 @@ describe('MatchMaker', function() {
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}, 'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0101'},
 		]); _(); },
 		
 	    ], done)();
@@ -197,6 +198,18 @@ describe('MatchMaker', function() {
 		    ]);
 		    _();
 		},
+	    ], done)();
+	});
+	it('should support the case where the .map and .json files are introduced in order opposite to their timestamps', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.json': {x:1}}, _ts: '0200'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'b.map': {m:1}}, _ts: '0100'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '0200X'},
+		    ]); _();
+		},
+		
 	    ], done)();
 	});
     });

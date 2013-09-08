@@ -20,6 +20,7 @@
          - [put](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-put)
          - [remove](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-remove)
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-getifexists)
+         - [getLatest](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-getlatest)
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-tscond)
          - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accum)
          - [accumReset](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accumreset)
@@ -433,7 +434,8 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}, 'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0101'},
 		]); _(); },
 		
 ], done)();
@@ -482,6 +484,21 @@ util.seq([
 		    ]);
 		    _();
 		},
+], done)();
+```
+
+should support the case where the .map and .json files are introduced in order opposite to their timestamps.
+
+```js
+util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'a.json': {x:1}}, _ts: '0200'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'b.map': {m:1}}, _ts: '0100'}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result._tasks, [
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '0200X'},
+		    ]); _();
+		},
+		
 ], done)();
 ```
 
@@ -785,6 +802,22 @@ util.seq([
 			function(_) {
 			    assert(this.result['foo.a'], 'foo.a should be included in the results');
 			    assert(!this.result['bar.b'], 'bar.b was not included in the query');
+			    _();
+			},
+], done)();
+```
+
+<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-getlatest"></a>
+#### getLatest
+should return the latest version of each file, regardless of the transaction timestamp.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/foo/bar/', put: {x: {y:1}}, _ts: '0100'}, _); },
+			function(_) { driver.transaction({path: '/foo/bar/', put: {x: {y:2}}, _ts: '0200'}, _); },
+			function(_) { driver.transaction({path: '/foo/bar/', getLatest: ['x'], _ts: '0150'}, _.to('result')); },
+			function(_) {
+			    assert.equal(this.result['x:latest'].y, 2);
 			    _();
 			},
 ], done)();

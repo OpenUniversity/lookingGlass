@@ -267,60 +267,6 @@ MFS.prototype.throwFileNotFoundException = function(path) {
     throw err;
 }
 
-/*MFS.prototype.trans_map = function(map, update, fields, ts) {
-    if(!update.$set) {
-        update.$set = {};
-    }
-    util.createHashID(map);
-    update.$set['m.' + map._id] = map;
-    fields.f = 1;
-    var self = this;
-    return function(path, doc, actions) {
-        var files = doc.f;
-        for(var key in files) {
-            if(key.charAt(key.length-1) != '/') {
-                var vers = files[key];
-                if(vers.length == 0) continue;
-                var lastVer = vers[vers.length - 1];
-                if(lastVer._dead) continue;
-                actions.push({type: 'map', mapping: map, path: self.encoder.decode(path + key), content: lastVer});
-            } else {
-                actions.push({type: 'tramp', map: map, path: self.encoder.decode(path + key), _ts: ts});
-            }
-        }
-    };
-};
-
-MFS.prototype.trans_unmap = function(unmap, update, fields, ts) {
-    if(!update.$unset) {
-        update.$unset = {};
-    }
-    for(var i = 0; i < unmap.length; i++) {
-	update.$unset['m.' + unmap[i]] = 0;
-	fields['m.' + unmap[i]] = 1;
-    }
-    fields.f = 1;
-    var self = this;
-    return function(path, doc, actions) {
-        var files = doc.f;
-	for(var i = 0; i < unmap.length; i++) {
-	    var mapping = doc.m[unmap[i]];
-	    if(!mapping) throw Error('Invalid mapping ' + unmap[i]);
-	    for(var key in files) {
-		if(key.charAt(key.length-1) != '/') {
-		    var vers = files[key];
-		    if(vers.length == 0) continue;
-		    var lastVer = vers[vers.length - 1];
-		    if(lastVer._dead) continue;
-		    actions.push({type: 'unmap', mapping: mapping, path: self.encoder.decode(path + key), content: lastVer});
-		} else {
-		    actions.push({type: 'tramp', unmap: [unmap[i]], path: self.encoder.decode(path + key), _ts: ts});
-		}
-	    }
-	}
-    };
-};
-*/
 MFS.prototype.trans_remove = function(remove, update, fields, ts) {
     var put = {};
     for(var i = 0; i < remove.length; i++) {
@@ -348,6 +294,19 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
         }
     };
 };
+
+MFS.prototype.trans_getLatest = function(get, update, fields, ts) {
+    var getIfExists = this.trans_getIfExists(get, update, fields, '~');  // ~ is the highest printable character in ASCII
+    return function(path, doc, result) {
+	var res = {};
+	getIfExists(path, doc, res);
+	for(var key in res) {
+	    result[key + ':latest'] = res[key];
+	}
+    }
+};
+
+
 
 MFS.prototype.trans_tsCond = function(tsCond, update, fields, ts, query) {
     for(var key in tsCond) {
