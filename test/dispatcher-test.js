@@ -108,7 +108,53 @@ describe('Dispatcher', function() {
 		    }
 		}
 	    });
-	       
+	});
+	function wordCount(path, content) {
+	    var words = content.text.split(/[ \t]+/);
+	    for(var i = 0; i < words.length; i++) {
+		emit('/wordCount/' + words[i], 1);
+	    }
+	}
+	describe('unmap', function() {
+	    it('should be referred to the corresponding mapper, returning transactions with remove operations', function(done) {
+		disp.dispatch({type: 'unmap',
+			       path: '/a/b/c',
+			       content: {foo: 'bar'},
+			       map: {_mapper: 'mirror',
+				     origPath: '/a/b/',
+				     newPath: '/P/Q/'},
+			       _ts: '0123'}, 
+			      util.protect(done, function(err, tasks) {
+				  assert.deepEqual(tasks, [
+				      {type: 'transaction',
+				       path: '/P/Q/',
+				       remove: ['c'],
+				       _ts: '0123'}
+				  ]);
+				  done();
+			      }));
+	    });
+	    it('should return an accum transaction with negative increment, if the mapper returns content as a number', function(done) {
+		disp.dispatch({type: 'unmap',
+			       path: '/a/b/c',
+			       content: {text: 'hello world'},
+			       map: {_mapper: 'javascript',
+				     func: wordCount.toString()},
+			       _ts: '0123'}, 
+			      util.protect(done, function(err, tasks) {
+				  assert.deepEqual(tasks, [
+				      {type: 'transaction',
+				       path: '/wordCount/',
+				       accum: {hello: -1},
+				       _ts: '0123'},
+				      {type: 'transaction',
+				       path: '/wordCount/',
+				       accum: {world: -1},
+				       _ts: '0123'},
+				  ]);
+				  done();
+			      }));
+	    });
 	});
     });
 });

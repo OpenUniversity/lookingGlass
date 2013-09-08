@@ -18,11 +18,15 @@ exports.Dispatcher = function(storage, mappers) {
 	    }
 	}));
     }
-    this.do_map = function(task, callback) {
+    function getMapper(task) {
 	var mapperName = task.map._mapper;
 	if(!mapperName) throw new Error('No mapper in mapping: ' + JSON.stringify(task.map));
 	var mapper = mappers[mapperName];
 	if(!mapper) throw new Error('Invalid mapper: ' + mapperName);
+	return mapper;
+    }
+    this.do_map = function(task, callback) {
+	var mapper = getMapper(task);
 	mapper.map(task, util.protect(callback, function(err, list) {
 	    var tasks = []
 	    for(var i = 0; i < list.length; i++) {
@@ -41,6 +45,30 @@ exports.Dispatcher = function(storage, mappers) {
 		    tasks.push({type: 'transaction',
 				path: parsed.dirPath,
 				put: put,
+				_ts: task._ts});
+		}
+	    }
+	    callback(undefined, tasks);
+	}));
+    };
+    this.do_unmap = function(task, callback) {
+	var mapper = getMapper(task);
+	mapper.map(task, util.protect(callback, function(err, list) {
+	    var tasks = [];
+	    for(var i = 0; i < list.length; i++) {
+		var entry = list[i];
+		var parsed = util.parsePath(entry.path);
+		if(typeof(entry.content) == 'number') {
+		    var accum = {};
+		    accum[parsed.fileName] = -entry.content;
+		    tasks.push({type: 'transaction',
+				path: parsed.dirPath,
+				accum: accum,
+				_ts: task._ts});
+		} else {
+		    tasks.push({type: 'transaction',
+				path: parsed.dirPath,
+				remove: [parsed.fileName],
 				_ts: task._ts});
 		}
 	    }

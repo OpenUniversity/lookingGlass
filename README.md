@@ -31,6 +31,7 @@
      - [dispatch(task, callback(err, tasks))](#dispatcher-dispatchtask-callbackerr-tasks)
        - [transaction](#dispatcher-dispatchtask-callbackerr-tasks-transaction)
        - [map](#dispatcher-dispatchtask-callbackerr-tasks-map)
+       - [unmap](#dispatcher-dispatchtask-callbackerr-tasks-unmap)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
      - [PUT](#lookingglass-restful-api-put)
@@ -942,6 +943,53 @@ function wordCount(path, content) {
 	emit('/wordCount/' + words[i], 1);
     }
 }
+```
+
+<a name="dispatcher-dispatchtask-callbackerr-tasks-unmap"></a>
+### unmap
+should be referred to the corresponding mapper, returning transactions with remove operations.
+
+```js
+disp.dispatch({type: 'unmap',
+	       path: '/a/b/c',
+	       content: {foo: 'bar'},
+	       map: {_mapper: 'mirror',
+		     origPath: '/a/b/',
+		     newPath: '/P/Q/'},
+	       _ts: '0123'}, 
+	      util.protect(done, function(err, tasks) {
+		  assert.deepEqual(tasks, [
+		      {type: 'transaction',
+		       path: '/P/Q/',
+		       remove: ['c'],
+		       _ts: '0123'}
+		  ]);
+		  done();
+	      }));
+```
+
+should return an accum transaction with negative increment, if the mapper returns content as a number.
+
+```js
+disp.dispatch({type: 'unmap',
+	       path: '/a/b/c',
+	       content: {text: 'hello world'},
+	       map: {_mapper: 'javascript',
+		     func: wordCount.toString()},
+	       _ts: '0123'}, 
+	      util.protect(done, function(err, tasks) {
+		  assert.deepEqual(tasks, [
+		      {type: 'transaction',
+		       path: '/wordCount/',
+		       accum: {hello: -1},
+		       _ts: '0123'},
+		      {type: 'transaction',
+		       path: '/wordCount/',
+		       accum: {world: -1},
+		       _ts: '0123'},
+		  ]);
+		  done();
+	      }));
 ```
 
 <a name="mirrormapper"></a>
