@@ -1,23 +1,6 @@
 var assert = require("assert");
 var util = require("../util.js");
 
-function trampoline(driver, actions, callback) {
-    for(var i = 0; i < actions.length; i++) {
-        var action = actions[i];
-        if(action.type == 'tramp') {
-            actions.splice(i, 1);
-            driver.trampoline(action, function(err, newActions) {
-                if(err) return callback(err);
-                actions = actions.concat(newActions);
-                trampoline(driver, actions, callback);
-            });
-            return;
-        }
-    }
-    // Found no trampoline actions
-    callback(undefined, actions);
-}
-
 function describeStorageDriver(driverContainer) {
     var driver
     before(function() {
@@ -94,7 +77,7 @@ function describeStorageDriver(driverContainer) {
 			},
 		    ], done)();
 		});
-		it('should return all files which names end with .<suffix>, if given *.<suffix>', function(done) {
+		it('should return all files which names end with .[suffix], if given *.[suffix]', function(done) {
 		    util.seq([
 			function(_) { driver.transaction({path: '/a/b/', put: {'foo().json': {x:1}, 'bar{}.json': {x:2}}}, _); },
 			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
@@ -103,6 +86,19 @@ function describeStorageDriver(driverContainer) {
 			    assert(!this.result.d, 'd should not be listed');
 			    assert(this.result['foo().json'], 'foo().json should be listed');
 			    assert.equal(this.result['foo().json'].x, 1);
+			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
+			    assert.equal(this.result['bar{}.json'].x, 2);
+			    _();
+			},
+		    ], done)();
+		});
+		it('should not return deleted files in wildcard searches', function(done) {
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo().json': {x:1}, 'bar{}.json': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', remove: ['foo().json']}, _); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
+			function(_) {
+			    assert(!this.result['foo().json'], 'foo().json should not be listed (it was removed)');
 			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
 			    assert.equal(this.result['bar{}.json'].x, 2);
 			    _();

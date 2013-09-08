@@ -190,7 +190,10 @@ MFS.prototype.addSubFields = function(obj, suffix, ts, result) {
 	var name = key + suffix;
 	var child = obj[key];
 	if(Array.isArray(child)) {
-	    result[this.encoder.decode(name)] = getLatestVersionAsOf(child, ts);
+	    var latest = getLatestVersionAsOf(child, ts);
+	    if(!latest._dead) {
+		result[this.encoder.decode(name)] = latest;
+	    }
 	} else if(typeof(child) == 'object') {
 	    this.addSubFields(child, '.' + name, ts, result);
 	}

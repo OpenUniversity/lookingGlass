@@ -36,7 +36,8 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the earliest stored version if latest prior to ts is not stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the earliest stored version if latest prior to ts is not stored
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not find the file if it was created past the transaction ts, as long as enough versions are stored
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files if given *: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files if given *
-    MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .<suffix>, if given *.<suffix>: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .<suffix>, if given *.<suffix>
+    MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .[suffix], if given *.[suffix]: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should return all files which names end with .[suffix], if given *.[suffix]
+    MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not return deleted files in wildcard searches: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should not return deleted files in wildcard searches
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given
@@ -58,6 +59,7 @@
     Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number
     ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node): [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node)
     ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending: [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending
+    ClusterNode start() should cause the node to automatically take .pending tasks and execute them: [2K[0G  ․ ClusterNode start() should cause the node to automatically take .pending tasks and execute them
     Trampoline transaction should relay transactions to the underlying storage, and return the result: [2K[0G  ․ Trampoline transaction should relay transactions to the underlying storage, and return the result
     Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded: [2K[0G  ․ Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded
     Trampoline transaction should not exceed the given timeout (by too much): [2K[0G  ․ Trampoline transaction should not exceed the given timeout (by too much)
@@ -74,6 +76,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  66 passing (754 ms)
+  68 passing (790 ms)
   8 pending
 

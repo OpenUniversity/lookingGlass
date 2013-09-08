@@ -31,6 +31,7 @@
        - [unmap](#dispatcher-dispatchtask-callbackerr-tasks-unmap)
    - [ClusterNode](#clusternode)
      - [transaction(trans, callback(err, result))](#clusternode-transactiontrans-callbackerr-result)
+     - [start()](#clusternode-start)
    - [Trampoline](#trampoline)
      - [transaction](#trampoline-transaction)
      - [dispatch](#trampoline-dispatch)
@@ -385,11 +386,12 @@ should create a transaction entry in the _tasks field of the result to add a .d 
 
 ```js
 util.seq([
-		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}}, _.to('result')); },
+		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
 		    {type: 'transaction',   // Create a transaction
 		     path: '/new/',         // On the parent directory
-		     put: {'dir.d': {}}}    // To add a .d placeholder to indicate this directory (named dir)
+		     put: {'dir.d': {}},    // To add a .d placeholder to indicate this directory (named dir)
+		     _ts: '0100'}
 		]); _(); },
 		
 ], done)();
@@ -399,9 +401,9 @@ should create a task for each subdirectory, to propagate .map files up.
 
 ```js
 util.seq([
-		function(_) { mm.transaction({path: '/a/b/c/', put: {g:{}, h:{}}}, _.to('c')); },
+		function(_) { mm.transaction({path: '/a/b/c/', put: {g:{}, h:{}}, _ts: '0098'}, _.to('c')); },
 		function(_) { trampoline(this.c._tasks, _); },
-		function(_) { mm.transaction({path: '/a/b/d/', put: {g:{}, h:{}}}, _.to('d')); },
+		function(_) { mm.transaction({path: '/a/b/d/', put: {g:{}, h:{}}, _ts: '0099'}, _.to('d')); },
 		function(_) { trampoline(this.d._tasks, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}}, _ts: '0100'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
@@ -644,7 +646,7 @@ util.seq([
 ], done)();
 ```
 
-should return all files which names end with .<suffix>, if given *.<suffix>.
+should return all files which names end with .[suffix], if given *.[suffix].
 
 ```js
 util.seq([
@@ -655,6 +657,22 @@ util.seq([
 			    assert(!this.result.d, 'd should not be listed');
 			    assert(this.result['foo().json'], 'foo().json should be listed');
 			    assert.equal(this.result['foo().json'].x, 1);
+			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
+			    assert.equal(this.result['bar{}.json'].x, 2);
+			    _();
+			},
+], done)();
+```
+
+should not return deleted files in wildcard searches.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', put: {'foo().json': {x:1}, 'bar{}.json': {x:2}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', remove: ['foo().json']}, _); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['*.json']}, _.to('result')); },
+			function(_) {
+			    assert(!this.result['foo().json'], 'foo().json should not be listed (it was removed)');
 			    assert(this.result['bar{}.json'], 'bar{}.json should be listed');
 			    assert.equal(this.result['bar{}.json'].x, 2);
 			    _();
@@ -1014,13 +1032,28 @@ util.seq([
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
 						    put: {'b.d': {}},
-						    _ts: task._ts});
+						    _ts: task._ts,
+						    _id: task._id});
 			    beenThere = true;
 			}
 		    }
 		    assert(beenThere, 'should encounter a task');
 		    _();
 		},
+], done)();
+```
+
+<a name="clusternode-start"></a>
+## start()
+should cause the node to automatically take .pending tasks and execute them.
+
+```js
+util.seq([
+		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { node1.start(); _(); },
+		function(_) { setTimeout(_, 100); }, // enough time to work
+		function(_) { node2.transaction({path: '/a/', get: ['b.d']}, _.to('result')); },
+		function(_) { assert(this.result['b.d'], 'directory must exist'); _(); },
 ], done)();
 ```
 

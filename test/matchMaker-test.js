@@ -114,20 +114,21 @@ describe('MatchMaker', function() {
 	});
 	it('should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new', function(done) {
 	    util.seq([
-		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}}, _.to('result')); },
+		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
 		    {type: 'transaction',   // Create a transaction
 		     path: '/new/',         // On the parent directory
-		     put: {'dir.d': {}}}    // To add a .d placeholder to indicate this directory (named dir)
+		     put: {'dir.d': {}},    // To add a .d placeholder to indicate this directory (named dir)
+		     _ts: '0100'}
 		]); _(); },
 		
 	    ], done)();
 	});
 	it('should create a task for each subdirectory, to propagate .map files up', function(done) {
 	    util.seq([
-		function(_) { mm.transaction({path: '/a/b/c/', put: {g:{}, h:{}}}, _.to('c')); },
+		function(_) { mm.transaction({path: '/a/b/c/', put: {g:{}, h:{}}, _ts: '0098'}, _.to('c')); },
 		function(_) { trampoline(this.c._tasks, _); },
-		function(_) { mm.transaction({path: '/a/b/d/', put: {g:{}, h:{}}}, _.to('d')); },
+		function(_) { mm.transaction({path: '/a/b/d/', put: {g:{}, h:{}}, _ts: '0099'}, _.to('d')); },
 		function(_) { trampoline(this.d._tasks, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}}, _ts: '0100'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [

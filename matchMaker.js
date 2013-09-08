@@ -34,7 +34,7 @@ exports.MatchMaker = function(storage) {
 	    }
 	}
 	return function(result) {
-	    ensureParent(trans.path, result);
+	    ensureParent(trans.path, result, trans._ts);
 
 	    for(var key in putCmd) {
 		if(endsWith(key, '.json')) {
@@ -138,7 +138,7 @@ exports.MatchMaker = function(storage) {
 	}
     }
 
-    function ensureParent(path, result) {
+    function ensureParent(path, result, ts) {
 	if(path == '/') return;
 	assert.equal(path.charAt(path.length - 1), '/');
 	path = path.substr(0, path.length - 1);
@@ -148,7 +148,8 @@ exports.MatchMaker = function(storage) {
 	    put[parsed.fileName + '.d'] = {};
 	    createTask(result, {type: 'transaction',
 				path: parsed.dirPath,
-				put: put});
+				put: put,
+				_ts: ts});
 	}
     }
     function createTask(result, task) {

@@ -34,14 +34,8 @@ describe('ClusterNode', function() {
 	    function(_) { coll.remove({}, _); },
 	    function(_) { collTracker.remove({}, _); },
 	], done)();
-	node1.start();
-	node2.start();
-	node3.start();
     });
     afterEach(function() {
-	node1.stop();
-	node2.stop();
-	node3.stop();
     });
     describe('transaction(trans, callback(err, result))', function() {
 	it('should relay the transaction to the underlying storage (regardless of node)', function(done) {
@@ -63,13 +57,25 @@ describe('ClusterNode', function() {
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
 						    put: {'b.d': {}},
-						    _ts: task._ts});
+						    _ts: task._ts,
+						    _id: task._id});
 			    beenThere = true;
 			}
 		    }
 		    assert(beenThere, 'should encounter a task');
 		    _();
 		},
+	    ], done)();
+	});
+    });
+    describe('start()', function() {
+	it('should cause the node to automatically take .pending tasks and execute them', function(done) {
+	    util.seq([
+		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { node1.start(); _(); },
+		function(_) { setTimeout(_, 100); }, // enough time to work
+		function(_) { node2.transaction({path: '/a/', get: ['b.d']}, _.to('result')); },
+		function(_) { assert(this.result['b.d'], 'directory must exist'); _(); },
 	    ], done)();
 	});
     });
