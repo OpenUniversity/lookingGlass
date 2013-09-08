@@ -17,10 +17,6 @@
        - [.transaction(trans, callback(err, result))](#mongofs-as-storagedriver-transactiontrans-callbackerr-result)
          - [get](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-get)
          - [put](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-put)
-         - [map](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-map)
-           - [with put](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-map-with-put)
-           - [with remove](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-map-with-remove)
-         - [unmap](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-unmap)
          - [remove](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-remove)
          - [getIfExists](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-getifexists)
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-tscond)
@@ -32,6 +28,8 @@
        - [transaction](#dispatcher-dispatchtask-callbackerr-tasks-transaction)
        - [map](#dispatcher-dispatchtask-callbackerr-tasks-map)
        - [unmap](#dispatcher-dispatchtask-callbackerr-tasks-unmap)
+   - [Trampoline](#trampoline)
+     - [transaction](#trampoline-transaction)
    - [MirrorMapper](#mirrormapper)
    - [lookingGlass RESTful API](#lookingglass-restful-api)
      - [PUT](#lookingglass-restful-api-put)
@@ -706,14 +704,6 @@ util.seq([
 ], done)();
 ```
 
-<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-map"></a>
-#### map
-<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-map-with-put"></a>
-##### with put
-<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-map-with-remove"></a>
-##### with remove
-<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-unmap"></a>
-#### unmap
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-remove"></a>
 #### remove
 should remove a file of the given path.
@@ -990,6 +980,24 @@ disp.dispatch({type: 'unmap',
 		  ]);
 		  done();
 	      }));
+```
+
+<a name="trampoline"></a>
+# Trampoline
+<a name="trampoline-transaction"></a>
+## transaction
+should relay transactions to the underlying storage, and return the result.
+
+```js
+util.seq([
+		function(_) { tramp.transaction({path: '/a/b/', put: {'c.json': {foo:'bar'}}, _ts: '0100'}, _); },
+		function(_) { tramp.transaction({path: '/a/b/', get: ['c.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['c.json'], {foo: 'bar', _ts: '0100'});
+		    _();
+		},
+		
+], done)();
 ```
 
 <a name="mirrormapper"></a>

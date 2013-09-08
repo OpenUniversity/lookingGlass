@@ -40,14 +40,6 @@
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should write a file so that "get" retrieves it
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should assign a timestamp to a file if one is not provided
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) put should reflect the provided timestamp if one is given
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map should emit actions including the mapping for all files in the directory
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map should emit actions so that when sending the "tramp" actions back, we get mappings for all files in the sub-tree
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map should work whether or not the directory already exists
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map should propagate to future subdirectories
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map with put should cause subsequent puts emit the mapping for the new object
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map with put should cause puts that overrides an existing value provide mapping for the new value and unmapping for the old one
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) map with remove should emit unmapping of the removed content
-  - MongoFS as StorageDriver .transaction(trans, callback(err, result)) unmap should remove the mapping with ts from path, and produce actions to undo its effect
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file of the given path: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file of the given path
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file only if the removal timestamp is greater than the latest: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) remove should remove a file only if the removal timestamp is greater than the latest
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) getIfExists should return only the files that exist in the list: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) getIfExists should return only the files that exist in the list
@@ -64,6 +56,7 @@
     Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number
     Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations
     Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number
+    Trampoline transaction should relay transactions to the underlying storage, and return the result: [2K[0G  ․ Trampoline transaction should relay transactions to the underlying storage, and return the result
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
   - lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them
   - lookingGlass RESTful API PUT should accept data of any content type
@@ -74,6 +67,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  58 passing (558 ms)
-  16 pending
+  59 passing (650 ms)
+  8 pending
 
