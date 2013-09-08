@@ -52,17 +52,40 @@ describe('Trampoline', function() {
 	    ], done)();
 	});
 	it('should not exceed the given timeout (by too much)', function(done) {
-	    var shortTramp = new Trampoline(disp, 2); // only two milliseconds
+	    var shortTramp = new Trampoline(disp, 50); // only two milliseconds
+	    function infiniteMapper(path, content) {
+		// foo.json -> fooX.json
+		emit(path.substr(0, path.length - 5) + 'X.json', content);
+	    }
 	    util.seq([
 		function(_) { shortTramp.transaction({path: '/a/b/', put: {'a.json': {foo: 'bar'}}, _ts: '0100'}, _); },
 		function(_) { this.startTime = (new Date()).getTime(); _(); },
-		function(_) { shortTramp.transaction({path: '/a/', put: {'b.map': {_mapper: 'mirror',
-										   origPath: '/a/',
-										   newPath: '/A/'}}, _ts: '0101'}, _); },
+		function(_) { shortTramp.transaction({path: '/a/', put: {'b.map': {_mapper: 'javascript',
+										   func: infiniteMapper.toString()}}, _ts: '0101'}, _); },
 		function(_) { this.endTime = (new Date()).getTime(); _(); },
 		function(_) {
-		    assert(this.endTime - this.startTime <= 3, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
+		    assert(this.endTime - this.startTime <= 60, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
 		    _();
+		},
+		
+	    ], done)();
+	});
+	it('should update result._tasks so that the residual tasks can be resumed once the timeout was exceeded', function(done) {
+	    var shortTramp = new Trampoline(disp, 0); // not enough time to do anything
+	    util.seq([
+		function(_) { tramp.transaction({path: '/a/b/', put: {'a.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { shortTramp.transaction({path: '/a/', put: {'b.map': {_mapper: 'mirror',
+										   origPath: '/a/',
+										   newPath: '/A/'}}, _ts: '0101'}, _.to('result')); },
+		function(_) { var cb = util.parallel(this.result._tasks.length, _);
+			      for(var i = 0; i < this.result._tasks.length; i++) {
+				  tramp.dispatch(this.result._tasks[i], cb);
+			      }
+			    },
+		
+		function(_) { tramp.transaction({path: '/A/b/', get: ['a.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['a.json'], {foo: 'bar', _ts: '0101X'}); _();
 		},
 		
 	    ], done)();

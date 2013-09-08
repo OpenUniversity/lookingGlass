@@ -16,18 +16,17 @@ exports.Trampoline = function(disp, timeout) {
     };
     var self = this;
     function dispatchList(tasks, startTime, callback) {
-	if(tasks.length == 0 || (new Date()).getTime() - startTime >= timeout) {
+	var elapsedTime = (new Date()).getTime() - startTime;
+	if(tasks.length == 0 || elapsedTime >= timeout) {
 	    return callback(undefined, tasks);
 	}
 	var first = tasks[0];
-	self.dispatch(first, util.protect(callback, function(err, newTasks) {
+	disp.dispatch(first, util.protect(callback, function(err, newTasks) {
 	    dispatchList(tasks.slice(1).concat(newTasks), startTime, callback);
 	}));
     }
     this.dispatch = function(task, callback) {
 	var startTime = (new Date()).getTime();
-	disp.dispatch(task, util.protect(callback, function(err, tasks) {
-	    dispatchList(tasks, startTime, callback);
-	}));
+	dispatchList([task], startTime, callback);
     };
 };

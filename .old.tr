@@ -59,6 +59,7 @@
     Trampoline transaction should relay transactions to the underlying storage, and return the result: [2K[0G  ․ Trampoline transaction should relay transactions to the underlying storage, and return the result
     Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded: [2K[0G  ․ Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded
     Trampoline transaction should not exceed the given timeout (by too much): [2K[0G  ․ Trampoline transaction should not exceed the given timeout (by too much)
+    Trampoline transaction should update result._tasks so that the residual tasks can be resumed once the timeout was exceeded: [2K[0G  ․ Trampoline transaction should update result._tasks so that the residual tasks can be resumed once the timeout was exceeded
     Trampoline dispatch should relay tasks to the underlying dispatcher: [2K[0G  ․ Trampoline dispatch should relay tasks to the underlying dispatcher
     Trampoline dispatch should re-dispatch tasks returned from dispatched tasks, until no tasks are left, given it is done within the timeout: [2K[0G  ․ Trampoline dispatch should re-dispatch tasks returned from dispatched tasks, until no tasks are left, given it is done within the timeout
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
@@ -71,6 +72,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  63 passing (713 ms)
+  64 passing (670 ms)
   8 pending
 
