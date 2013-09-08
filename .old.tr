@@ -56,6 +56,8 @@
     Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number
     Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations
     Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number
+    ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node): [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node)
+    ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending: [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending
     Trampoline transaction should relay transactions to the underlying storage, and return the result: [2K[0G  ․ Trampoline transaction should relay transactions to the underlying storage, and return the result
     Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded: [2K[0G  ․ Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded
     Trampoline transaction should not exceed the given timeout (by too much): [2K[0G  ․ Trampoline transaction should not exceed the given timeout (by too much)
@@ -72,6 +74,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  64 passing (670 ms)
+  66 passing (754 ms)
   8 pending
 

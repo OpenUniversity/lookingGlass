@@ -8,6 +8,7 @@
        - [.decode(enc)](#util-encoderallowedspecial-decodeenc)
      - [parallel(n, callback)](#util-paralleln-callback)
      - [Worker](#util-worker)
+     - [GrowingInterval](#util-growinginterval)
    - [jsMapper](#jsmapper)
    - [MatchMaker](#matchmaker)
      - [put](#matchmaker-put)
@@ -28,6 +29,8 @@
        - [transaction](#dispatcher-dispatchtask-callbackerr-tasks-transaction)
        - [map](#dispatcher-dispatchtask-callbackerr-tasks-map)
        - [unmap](#dispatcher-dispatchtask-callbackerr-tasks-unmap)
+   - [ClusterNode](#clusternode)
+     - [transaction(trans, callback(err, result))](#clusternode-transactiontrans-callbackerr-result)
    - [Trampoline](#trampoline)
      - [transaction](#trampoline-transaction)
      - [dispatch](#trampoline-dispatch)
@@ -981,6 +984,44 @@ disp.dispatch({type: 'unmap',
 		  ]);
 		  done();
 	      }));
+```
+
+<a name="clusternode"></a>
+# ClusterNode
+<a name="clusternode-transactiontrans-callbackerr-result"></a>
+## transaction(trans, callback(err, result))
+should relay the transaction to the underlying storage (regardless of node).
+
+```js
+util.seq([
+		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { node2.transaction({path: '/a/b/', get: ['c.json']}, _.to('result')); },
+		function(_) { assert.deepEqual(this.result['c.json'], {foo: 'bar', _ts: '0100'}); _(); },
+], done)();
+```
+
+should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending.
+
+```js
+util.seq([
+		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { tracker.transaction({path: '/node/node1/', get: ['*.pending'] }, _.to('result')); },
+		function(_) {
+		    var beenThere = false;
+		    for(var key in this.result) {
+			if(key.substr(key.length - 8) == '.pending') {
+			    var task = this.result[key];
+			    assert.deepEqual(task, {type: 'transaction',
+						    path: '/a/',
+						    put: {'b.d': {}},
+						    _ts: task._ts});
+			    beenThere = true;
+			}
+		    }
+		    assert(beenThere, 'should encounter a task');
+		    _();
+		},
+], done)();
 ```
 
 <a name="trampoline"></a>

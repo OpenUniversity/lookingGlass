@@ -142,6 +142,8 @@ describe('Worker', function() {
         }), 100);
     });
 });
+    describe.skip('GrowingInterval', function() {
+    });
 
 });
 
