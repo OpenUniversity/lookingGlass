@@ -914,6 +914,36 @@ disp.dispatch({type: 'map',
 	      }));
 ```
 
+should return an accum transaction, if the mapper returns content as a number.
+
+```js
+disp.dispatch({type: 'map',
+	       path: '/a/b/c',
+	       content: {text: 'hello world'},
+	       map: {_mapper: 'javascript',
+		     func: wordCount.toString()},
+	       _ts: '0123'}, 
+	      util.protect(done, function(err, tasks) {
+		  assert.deepEqual(tasks, [
+		      {type: 'transaction',
+		       path: '/wordCount/',
+		       accum: {hello: 1},
+		       _ts: '0123'},
+		      {type: 'transaction',
+		       path: '/wordCount/',
+		       accum: {world: 1},
+		       _ts: '0123'},
+		  ]);
+		  done();
+	      }));
+function wordCount(path, content) {
+    var words = content.text.split(/[ \t]+/);
+    for(var i = 0; i < words.length; i++) {
+	emit('/wordCount/' + words[i], 1);
+    }
+}
+```
+
 <a name="mirrormapper"></a>
 # MirrorMapper
 should returns content objects identical to the source, except changing the path.

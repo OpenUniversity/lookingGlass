@@ -28,12 +28,21 @@ exports.Dispatcher = function(storage, mappers) {
 	    for(var i = 0; i < list.length; i++) {
 		var entry = list[i];
 		var parsed = util.parsePath(entry.path);
-		var put = {};
-		put[parsed.fileName] = entry.content;
-		tasks.push({type: 'transaction',
-			    path: parsed.dirPath,
-			    put: put,
-			    _ts: task._ts});
+		if(typeof(entry.content) == 'number') {
+		    var accum = {};
+		    accum[parsed.fileName] = entry.content;
+		    tasks.push({type: 'transaction',
+				path: parsed.dirPath,
+				accum: accum,
+				_ts: task._ts});
+		} else {
+		    var put = {};
+		    put[parsed.fileName] = entry.content;
+		    tasks.push({type: 'transaction',
+				path: parsed.dirPath,
+				put: put,
+				_ts: task._ts});
+		}
 	    }
 	    callback(undefined, tasks);
 	}));

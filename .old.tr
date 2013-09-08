@@ -61,6 +61,7 @@
     Dispatcher dispatch(task, callback(err, tasks)) transaction should handle "transaction" tasks by performing a transaction on the storage: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) transaction should handle "transaction" tasks by performing a transaction on the storage
     Dispatcher dispatch(task, callback(err, tasks)) transaction should return any further tasks: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) transaction should return any further tasks
     Dispatcher dispatch(task, callback(err, tasks)) map should be referred to the corresponding mapper, returning transactions with put operations: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) map should be referred to the corresponding mapper, returning transactions with put operations
+    Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) map should return an accum transaction, if the mapper returns content as a number
     MirrorMapper should returns content objects identical to the source, except changing the path: [2K[0G  ․ MirrorMapper should returns content objects identical to the source, except changing the path
   - lookingGlass RESTful API PUT should stopre JSON object so that GET can retrieve them
   - lookingGlass RESTful API PUT should accept data of any content type
@@ -71,6 +72,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  55 passing (633 ms)
+  56 passing (585 ms)
   16 pending
 
