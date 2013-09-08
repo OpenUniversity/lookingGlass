@@ -89,7 +89,7 @@ describe('ClusterNode', function() {
 	});
     });
     describe('wait(tracking, callback(err))', function() {
-	it.skip('should call the callback once all processing for the transaction associated with the tracking object is done', function(done) {
+	it('should call the callback once all processing for the transaction associated with the tracking object is done', function(done) {
 	    node1.start();
 	    util.seq([
 		function(_) { this.t1 = node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _); },
@@ -101,8 +101,8 @@ describe('ClusterNode', function() {
 		function(_) { setTimeout(_, 1000); },
 		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
 		function(_) {
-		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200'});
-		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '0200'});
+		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200X'});
+		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '0200X'});
 		    _();
 		},
 	    ], done)();

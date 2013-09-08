@@ -1106,6 +1106,27 @@ util.seq([
 
 <a name="clusternode-waittracking-callbackerr"></a>
 ## wait(tracking, callback(err))
+should call the callback once all processing for the transaction associated with the tracking object is done.
+
+```js
+node1.start();
+util.seq([
+		function(_) { this.t1 = node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _); },
+		function(_) { this.t2 = node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
+									      origPath: '/a/',
+									      newPath: '/X/Y/'}}, _ts: '0200'}, _); },
+		function(_) { node1.wait(this.t1, _); },
+		function(_) { node1.wait(this.t2, _); },
+		function(_) { setTimeout(_, 1000); },
+		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200X'});
+		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '0200X'});
+		    _();
+		},
+], done)();
+```
+
 <a name="trampoline"></a>
 # Trampoline
 <a name="trampoline-transaction"></a>
@@ -1155,7 +1176,7 @@ util.seq([
 										   func: infiniteMapper.toString()}}, _ts: '0101'}, _); },
 		function(_) { this.endTime = (new Date()).getTime(); _(); },
 		function(_) {
-		    assert(this.endTime - this.startTime <= 60, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
+		    assert(this.endTime - this.startTime <= 100, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
 		    _();
 		},
 		

@@ -64,7 +64,7 @@ describe('Trampoline', function() {
 										   func: infiniteMapper.toString()}}, _ts: '0101'}, _); },
 		function(_) { this.endTime = (new Date()).getTime(); _(); },
 		function(_) {
-		    assert(this.endTime - this.startTime <= 60, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
+		    assert(this.endTime - this.startTime <= 100, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
 		    _();
 		},
 		
