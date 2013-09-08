@@ -51,6 +51,22 @@ describe('Trampoline', function() {
 		
 	    ], done)();
 	});
+	it('should not exceed the given timeout (by too much)', function(done) {
+	    var shortTramp = new Trampoline(disp, 2); // only two milliseconds
+	    util.seq([
+		function(_) { shortTramp.transaction({path: '/a/b/', put: {'a.json': {foo: 'bar'}}, _ts: '0100'}, _); },
+		function(_) { this.startTime = (new Date()).getTime(); _(); },
+		function(_) { shortTramp.transaction({path: '/a/', put: {'b.map': {_mapper: 'mirror',
+										   origPath: '/a/',
+										   newPath: '/A/'}}, _ts: '0101'}, _); },
+		function(_) { this.endTime = (new Date()).getTime(); _(); },
+		function(_) {
+		    assert(this.endTime - this.startTime <= 3, 'should stop on time  (' + (this.endTime - this.startTime) + ' ms)');
+		    _();
+		},
+		
+	    ], done)();
+	});
     });
     describe('dispatch', function() {
 	it('should relay tasks to the underlying dispatcher', function(done) {
