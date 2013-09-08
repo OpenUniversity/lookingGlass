@@ -31,6 +31,8 @@ exports.MatchMaker = function(storage) {
 		addToGet(trans, '*.json');
 		addToGet(trans, '*.d');
 		addToGet(trans, key);
+	    } else if(endsWith(key, '.d')) {
+		addToGet(trans, '*.map');
 	    }
 	}
 	return function(result) {
@@ -78,6 +80,21 @@ exports.MatchMaker = function(storage) {
 						put: put,
 						_ts: trans._ts});
 			}
+		    }
+		} else if(endsWith(key, '.d')) {
+		    var putMaps = {};
+		    var foundMaps = false;
+		    for(var resultKey in result) {
+			if(endsWith(resultKey, '.map')) {
+			    putMaps[resultKey] = result[resultKey];
+			    foundMaps = true;
+			}
+		    }
+		    if(foundMaps) {
+			createTask(result, {type: 'transaction',
+					    path: trans.path + key.replace(/\.d$/, '/'),
+					    put: putMaps,
+					    _ts: trans._ts});
 		    }
 		}
 	    }

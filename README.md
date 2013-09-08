@@ -32,6 +32,7 @@
    - [ClusterNode](#clusternode)
      - [transaction(trans, callback(err, result))](#clusternode-transactiontrans-callbackerr-result)
      - [start()](#clusternode-start)
+     - [wait(tracking, callback(err))](#clusternode-waittracking-callbackerr)
    - [Trampoline](#trampoline)
      - [transaction](#trampoline-transaction)
      - [dispatch](#trampoline-dispatch)
@@ -423,6 +424,19 @@ function trampoline(input, callback) {
 		    trampoline(next, callback);
 		}));
 }
+```
+
+should create a task for propagating .map files to a new directory when a .d file is added.
+
+```js
+util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
+		function(_) { assert.deepEqual(this.result._tasks, [
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}, 'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		]); _(); },
+		
+], done)();
 ```
 
 should create an unmap task for the old content of a file when modifying an existing .json file.
@@ -1028,7 +1042,7 @@ util.seq([
 		    var beenThere = false;
 		    for(var key in this.result) {
 			if(key.substr(key.length - 8) == '.pending') {
-			    var task = this.result[key];
+			    var task = this.result[key].task;
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
 						    put: {'b.d': {}},
@@ -1057,6 +1071,8 @@ util.seq([
 ], done)();
 ```
 
+<a name="clusternode-waittracking-callbackerr"></a>
+## wait(tracking, callback(err))
 <a name="trampoline"></a>
 # Trampoline
 <a name="trampoline-transaction"></a>

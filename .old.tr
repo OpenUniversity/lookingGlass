@@ -23,6 +23,7 @@
     MatchMaker put should increment a counter (dir_exists) in the directory, so that it is only zero if the directory is new: [2K[0G  ․ MatchMaker put should increment a counter (dir_exists) in the directory, so that it is only zero if the directory is new
     MatchMaker put should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new: [2K[0G  ․ MatchMaker put should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new
     MatchMaker put should create a task for each subdirectory, to propagate .map files up: [2K[0G  ․ MatchMaker put should create a task for each subdirectory, to propagate .map files up
+    MatchMaker put should create a task for propagating .map files to a new directory when a .d file is added: [2K[0G  ․ MatchMaker put should create a task for propagating .map files to a new directory when a .d file is added
     MatchMaker put should create an unmap task for the old content of a file when modifying an existing .json file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing .json file
     MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file: [2K[0G  ․ MatchMaker put should create an unmap task for the old content of a file when modifying an existing .map file
     MatchMaker remove should create an unmap task for each removed .json file, for each existing .map file: [2K[0G  ․ MatchMaker remove should create an unmap task for each removed .json file, for each existing .map file
@@ -60,6 +61,7 @@
     ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node): [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node)
     ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending: [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending
     ClusterNode start() should cause the node to automatically take .pending tasks and execute them: [2K[0G  ․ ClusterNode start() should cause the node to automatically take .pending tasks and execute them
+  - ClusterNode wait(tracking, callback(err)) should call the callback once all processing for the transaction associated with the tracking object is done
     Trampoline transaction should relay transactions to the underlying storage, and return the result: [2K[0G  ․ Trampoline transaction should relay transactions to the underlying storage, and return the result
     Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded: [2K[0G  ․ Trampoline transaction should perform subsequent tasks before calling the callback, given the timeout is not exceeded
     Trampoline transaction should not exceed the given timeout (by too much): [2K[0G  ․ Trampoline transaction should not exceed the given timeout (by too much)
@@ -76,6 +78,6 @@
   - lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
   - lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  68 passing (790 ms)
-  8 pending
+  69 passing (863 ms)
+  9 pending
 

@@ -149,6 +149,16 @@ describe('MatchMaker', function() {
 		}));
 	    }
 	});
+	it('should create a task for propagating .map files to a new directory when a .d file is added', function(done) {
+	    util.seq([
+		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
+		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
+		function(_) { assert.deepEqual(this.result._tasks, [
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}, 'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
+		]); _(); },
+		
+	    ], done)();
+	});
 	it('should create an unmap task for the old content of a file when modifying an existing .json file', function(done) {
 	    util.seq([
 		// Create the initial content and two .map files

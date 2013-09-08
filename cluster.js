@@ -11,19 +11,14 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
     this.transaction = function(trans, callback) {
 	disp.transaction(trans, util.protect(callback, function(err, result) {
 	    if(result._tasks) {
-		var put = {};
-		for(var i = 0; i < result._tasks.length; i++) {
-		    var task = result._tasks[i];
-		    task._id = util.timeUid()
-		    put[task._id + PENDING_EXT] = task;
-		}
+		var tasks = result._tasks;
 		delete result._tasks;
-		tracker.transaction({path: trackerPath, put: put}, util.protect(callback, function() {
+		replaceDoneWithNewTasks(undefined, tasks, util.protect(callback, function() {
 		    callback(undefined, result);
 		}));
 	    } else {
 		callback(undefined, result);
-	    }		   
+	    }
 	}));
     };
 
@@ -32,7 +27,8 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    function(_) { tracker.transaction({path: trackerPath, getIfExists: ['*.pending']}, _.to('result')); },
 	    function(_) { this.task = findPendingTask(this.result); _(); },
 	    function(_) { if(this.task) _(); else callback(); },
-	    function(_) { markTaskInProgress(this.task, _); },
+	    function(_) { markTaskInProgress(this.task, _.to('result')); },
+	    function(_) { if(this.result[this.task._id + PENDING_EXT]) _(); else callback(); },
 	    function(_) { disp.dispatch(this.task, _.to('tasks')); },
 	    function(_) { replaceDoneWithNewTasks(this.task, this.tasks, _); },
 	], callback)();
@@ -41,19 +37,17 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
     function findPendingTask(dir) {
 	for(var key in dir) {
 	    if(key.substr(key.length - PENDING_EXT.length) == PENDING_EXT) {
-		return dir[key];
+		return dir[key].task;
 	    }
 	}
     }
     function markTaskInProgress(task, callback) {
 	var put = {};
-	put[task._id + WIP_EXT] = task;
-	var tsCond = {};
-	tsCond[task._id + PENDING_EXT] = task._ts;
+	put[task._id + WIP_EXT] = {task: task};
 	tracker.transaction({path: trackerPath,
 			     remove: [task._id + PENDING_EXT],
 			     put: put,
-			     tsCond: tsCond}, callback);
+			     getIfExists: [task._id + PENDING_EXT]}, callback);
     }
     function replaceDoneWithNewTasks(doneTask, newTasks, callback) {
 	var trans = {path: trackerPath};
@@ -64,8 +58,11 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	for(var i = 0; i < newTasks.length; i++) {
 	    var task = newTasks[i];
 	    task._id = util.timeUid();
-	    trans.put[task._id + PENDING_EXT] = task;
+	    trans.put[task._id + PENDING_EXT] = {task: task};
 	}
 	tracker.transaction(trans, callback);
     }
+    this.wait = function(tracking, callback) {
+	callback();
+    };
 };

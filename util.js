@@ -207,3 +207,24 @@ exports.createHashID = function(obj) {
     hash.update(JSON.stringify(obj), 'utf8');
     obj._id = hash.digest('base64');
 };
+
+exports.TracingDispatcher = function(disp, name) {
+    var baseTS = (new Date()).getTime();
+    function ts() {
+	return (new Date()).getTime() - baseTS;
+    }
+    this.transaction = function(trans, callback) {
+	console.log(ts(), name, 'transaction:', trans);
+	disp.transaction(trans, exports.protect(callback, function(err, result) {
+	    console.log(ts(), name, 'result:', result);
+	    callback(undefined, result);
+	}));
+    };
+    this.dispatch = function(task, callback) {
+	console.log(ts(), name, 'dispatch:', task);
+	disp.dispatch(task, exports.protect(callback, function(err, tasks) {
+	    console.log(ts(), name, 'tasks:', tasks);
+	    callback(undefined, tasks);
+	}));
+    };
+};

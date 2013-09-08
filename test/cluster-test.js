@@ -6,6 +6,8 @@ var util = require('../util.js');
 var assert = require('assert');
 var ClusterNode = require('../cluster.js').ClusterNode;
 
+var trace = false;
+//var trace = true;
 
 describe('ClusterNode', function() {
     var storage;
@@ -23,6 +25,10 @@ describe('ClusterNode', function() {
             storage = new MFS(coll, {maxVers: 2});
             tracker = new MFS(collTracker, {maxVers: 1});
             disp = new Dispatcher(new MatchMaker(storage), mappers);
+	    if(trace) {
+		disp = new util.TracingDispatcher(disp, 'DISP');
+		tracker = new util.TracingDispatcher(tracker, 'TRACKER');
+	    }
 	    node1 = new ClusterNode(disp, tracker, 'node1');
 	    node2 = new ClusterNode(disp, tracker, 'node2');
 	    node3 = new ClusterNode(disp, tracker, 'node3');
@@ -36,6 +42,9 @@ describe('ClusterNode', function() {
 	], done)();
     });
     afterEach(function() {
+	node1.stop();
+	node2.stop();
+	node3.stop();
     });
     describe('transaction(trans, callback(err, result))', function() {
 	it('should relay the transaction to the underlying storage (regardless of node)', function(done) {
@@ -53,7 +62,7 @@ describe('ClusterNode', function() {
 		    var beenThere = false;
 		    for(var key in this.result) {
 			if(key.substr(key.length - 8) == '.pending') {
-			    var task = this.result[key];
+			    var task = this.result[key].task;
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
 						    put: {'b.d': {}},
@@ -76,6 +85,26 @@ describe('ClusterNode', function() {
 		function(_) { setTimeout(_, 100); }, // enough time to work
 		function(_) { node2.transaction({path: '/a/', get: ['b.d']}, _.to('result')); },
 		function(_) { assert(this.result['b.d'], 'directory must exist'); _(); },
+	    ], done)();
+	});
+    });
+    describe('wait(tracking, callback(err))', function() {
+	it.skip('should call the callback once all processing for the transaction associated with the tracking object is done', function(done) {
+	    node1.start();
+	    util.seq([
+		function(_) { this.t1 = node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _); },
+		function(_) { this.t2 = node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
+									      origPath: '/a/',
+									      newPath: '/X/Y/'}}, _ts: '0200'}, _); },
+		function(_) { node1.wait(this.t1, _); },
+		function(_) { node1.wait(this.t2, _); },
+		function(_) { setTimeout(_, 1000); },
+		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
+		function(_) {
+		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200'});
+		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '0200'});
+		    _();
+		},
 	    ], done)();
 	});
     });
