@@ -53,9 +53,13 @@ exports.LookingGlassServer = function(disp, port) {
 	    data = {_content_type: req.headers['content-type'], _content: data};
 	}
 	put[parsed.fileName] = data;
-	disp.transaction({path: parsed.dirPath, put: put, _ts: data._ts}, util.protect(callback, function(err, actions) {
+	var trans = {path: parsed.dirPath, put: put};
+	if(data._ts) {
+	    trans._ts = data._ts;
+	}
+	disp.transaction(trans, util.protect(callback, function(err, result) {
 	    res.writeHead(201, {'Content-Type': 'application/json'});
-	    res.end(JSON.stringify(actions));
+	    res.end(JSON.stringify(result));
 	}));
     };
     this.do_GET = function(req, res, data, callback) {
@@ -64,7 +68,7 @@ exports.LookingGlassServer = function(disp, port) {
 	if(parsed.fileName == '') {
 	    return this.do_getDir(req, res, data, callback);
 	}
-	disp.transaction({path: parsed.dirPath, get:[parsed.fileName]}, function(err, actions) {
+	disp.transaction({path: parsed.dirPath, get:[parsed.fileName]}, function(err, result) {
 	    try {
 		if(err) {
 		    if(err.fileNotFound) {
@@ -75,22 +79,18 @@ exports.LookingGlassServer = function(disp, port) {
 			throw err;
 		    }
 		}
-		for(var i = 0; i < actions.length; i++) {
-		    if(actions[i].type == 'content') {
-			var content = actions[i].content;
-			var contentType = 'application/json';
-			if(content._content_type) {
-			    contentType = content._content_type;
-			    content = new Buffer(content._content, 'base64');
-			} else {
-			    content = JSON.stringify(content);
-			}
-			res.writeHead(200, {'Content-Type': contentType});
-			res.end(content);
-			return;
-		    }
+		
+		var content = result[parsed.fileName];
+		var contentType = 'application/json';
+		if(content._content_type) {
+		    contentType = content._content_type;
+		    content = new Buffer(content._content, 'base64');
+		} else {
+		    content = JSON.stringify(content);
 		}
-		throw new Error('No content found');
+		res.writeHead(200, {'Content-Type': contentType});
+		res.end(content);
+		return;
 	    } catch(e) {
 		callback(e);
 	    }
@@ -99,28 +99,26 @@ exports.LookingGlassServer = function(disp, port) {
     this.do_DELETE = function(req, res, data, callback) {
 	var path = req.url;
 	var parsed = util.parsePath(path);
-	disp.transaction({path: parsed.dirPath, remove: [parsed.fileName]}, util.protect(callback, function(err, actions) {
+	disp.transaction({path: parsed.dirPath, remove: [parsed.fileName]}, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
-	    res.end(JSON.stringify(actions));
+	    res.end(JSON.stringify(result));
 	}));
     };
     this.do_POST = function(req, res, data, callback) {
 	data.path = req.url;
-	var tracking = disp.transaction(data, util.protect(callback, function(err, actions) {
+	var tracking = disp.transaction(data, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
-	    res.end(JSON.stringify({tracking: tracking, actions: actions}));
+	    res.end(JSON.stringify(result));
 	}));
     };
     this.do_getDir = function(req, res, data, callback) {
 	var path = req.url;
-	disp.transaction({path: path, getDir:{expandFiles:1}}, util.protect(callback, function(err, actions) {
-	    var dir = {};
-	    for(var i = 0; i < actions.length; i++) {
-		if(actions[i].type != 'content') continue;
-		var parsed = util.parsePath(actions[i].path);
-		dir[parsed.fileName] = actions[i].content._ts;
-	    }
+	disp.transaction({path: path, get:['*']}, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
+	    var dir = {};
+	    for(file in result) {
+		dir[file] = result[file]._ts;
+	    }
 	    res.end(JSON.stringify(dir));
 	}));
     }

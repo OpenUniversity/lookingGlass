@@ -4,6 +4,8 @@ var LookingGlassServer = require('../restful.js').LookingGlassServer;
 var MFS = require('../mongofs.js').MFS;
 var Dispatcher = require('../dispatcher.js').Dispatcher;
 var http = require('http');
+var Trampoline = require('../trampoline.js').Trampoline;
+var ClusterNode = require('../cluster.js').ClusterNode;
 
 function DummyScheduler(path) {
     this.getPath = function() {
@@ -19,7 +21,7 @@ var mappers = {
     javascript: require('../jsMapper.js'),
 };
 
-describe.skip('lookingGlass RESTful API', function() {
+describe('lookingGlass RESTful API', function() {
     var storageColl, trackerColl, server;
     before(function(done) {
 	util.seq([
@@ -28,9 +30,12 @@ describe.skip('lookingGlass RESTful API', function() {
                 storageColl = this.db.collection('storage');
                 trackerColl = this.db.collection('tracker');
                 var storage = new MFS(storageColl, {maxVers: 2});
+//		storage = new util.TracingDispatcher(storage, 'STOR');
                 var tracker = new MFS(trackerColl, {maxVers: 2});
-                var disp = new Dispatcher(storage, tracker, scheduler, mappers);
-		server = new LookingGlassServer(disp, 47837);
+                var disp = new Dispatcher(storage, mappers);
+		var tramp = new Trampoline(disp, 100);
+		var node = new ClusterNode(tramp, tracker, 'node1');
+		server = new LookingGlassServer(node, 47837);
 		server.start();
                 _();
             },
