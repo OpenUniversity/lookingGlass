@@ -1,10 +1,10 @@
-var MatchMaker = require('../matchMaker.js').MatchMaker;
+var MapMatcher = require('../matchMaker.js').MapMatcher;
 var MFS = require('../mongofs.js').MFS;
 var util = require('../util.js');
 var assert = require('assert');
 
 
-describe('MatchMaker', function() {
+describe('MapMatcher', function() {
     var storage;
     var coll;
     var mm;
@@ -13,7 +13,8 @@ describe('MatchMaker', function() {
             if(err) return done(err);
             coll = db.collection('test');
             storage = new MFS(coll, {maxVers: 2});
-            mm = new MatchMaker(storage);
+//	    storage = new util.TracingDispatcher(storage, 'STORAGE');
+            mm = new MapMatcher(storage);
 	    done();
         });
     });
@@ -112,16 +113,10 @@ describe('MatchMaker', function() {
 		function(_) { assert.equal(this.result.dir_exists, 0); _(); },
 	    ], done)();
 	});
-	it('should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new', function(done) {
+	it('should create a .d entry in the parent directory if the directory is new', function(done) {
 	    util.seq([
 		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
-		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction',   // Create a transaction
-		     path: '/new/',         // On the parent directory
-		     put: {'dir.d': {}},    // To add a .d placeholder to indicate this directory (named dir)
-		     _ts: '0100'}
-		]); _(); },
-		
+		function(_) { mm.transaction({path: '/new/', get: ['dir.d']}, _); },
 	    ], done)();
 	});
 	it('should create a task for each subdirectory, to propagate .map files up', function(done) {
@@ -206,7 +201,8 @@ describe('MatchMaker', function() {
 		function(_) { mm.transaction({path: '/a/b/', put: {'b.map': {m:1}}, _ts: '0100'}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
-			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '0200X'},
+			// The timestamp is a combination of the future .json file and the new .map file
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
 		    ]); _();
 		},
 		

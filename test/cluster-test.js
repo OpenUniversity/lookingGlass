@@ -1,6 +1,6 @@
 var Trampoline = require('../trampoline.js').Trampoline;
 var Dispatcher = require('../dispatcher.js').Dispatcher;
-var MatchMaker = require('../matchMaker.js').MatchMaker;
+var MapMatcher = require('../matchMaker.js').MapMatcher;
 var MFS = require('../mongofs.js').MFS;
 var util = require('../util.js');
 var assert = require('assert');
@@ -24,9 +24,9 @@ describe('ClusterNode', function() {
             collTracker = db.collection('tracker');
             storage = new MFS(coll, {maxVers: 2});
             tracker = new MFS(collTracker, {maxVers: 1});
-            disp = new Dispatcher(new MatchMaker(storage), mappers);
+            disp = new Dispatcher(new MapMatcher(storage), mappers);
 	    if(trace) {
-//		disp = new util.TracingDispatcher(disp, 'DISP');
+		disp = new util.TracingDispatcher(disp, 'DISP');
 		tracker = new util.TracingDispatcher(tracker, 'TRACKER');
 	    }
 	    node1 = new ClusterNode(disp, tracker, 'node1');
@@ -57,19 +57,21 @@ describe('ClusterNode', function() {
 	it('should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending', function(done) {
 	    util.seq([
 		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
-		function(_) { tracker.transaction({path: '/node/node1/', get: ['*.pending'] }, _.to('result')); },
+		function(_) { node1.transaction({path: '/a/b/', put: {'d.map': {bar: 'baz'}}, _ts: '0101'}, _); },
+		function(_) { tracker.transaction({path: '/node/node1/', get: ['*']}, _.to('result')); },
 		function(_) {
 		    var beenThere = false;
 		    for(var key in this.result) {
 			if(key.substr(key.length - 8) == '.pending') {
 			    var task = this.result[key].task;
-			    assert.deepEqual(task, {type: 'transaction',
-						    path: '/a/',
-						    put: {'b.d': {}},
+			    assert.deepEqual(task, {type: 'map',
+						    path: '/a/b/c.json',
+						    content: {foo: 'bar', _ts: '0100'},
+						    map: {bar: 'baz', _ts: '0101'},
 						    _ts: task._ts,
 						    _id: task._id,
 						    _tracking: {path: '/node/node1/',
-								counter: '0100.counter'}});
+								counter: '0101.counter'}});
 			    beenThere = true;
 			}
 		    }

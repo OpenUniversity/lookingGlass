@@ -1,5 +1,5 @@
 var Dispatcher = require('../dispatcher.js').Dispatcher;
-var MatchMaker = require('../matchMaker.js').MatchMaker;
+var MapMatcher = require('../matchMaker.js').MapMatcher;
 var MFS = require('../mongofs.js').MFS;
 var util = require('../util.js');
 var assert = require('assert');
@@ -15,7 +15,7 @@ describe('Dispatcher', function() {
             if(err) return done(err);
             coll = db.collection('test');
             storage = new MFS(coll, {maxVers: 2});
-            mm = new MatchMaker(storage);
+            mm = new MapMatcher(storage);
 	    disp = new Dispatcher(mm, {
 		mirror: require('../mirrorMapper.js'),
 		javascript: require('../jsMapper.js')});

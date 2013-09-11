@@ -10,9 +10,9 @@
      - [Worker](#util-worker)
      - [GrowingInterval](#util-growinginterval)
    - [jsMapper](#jsmapper)
-   - [MatchMaker](#matchmaker)
-     - [put](#matchmaker-put)
-     - [remove](#matchmaker-remove)
+   - [MapMatcher](#mapmatcher)
+     - [put](#mapmatcher-put)
+     - [remove](#mapmatcher-remove)
    - [MongoFS](#mongofs)
      - [as StorageDriver](#mongofs-as-storagedriver)
        - [.transaction(trans, callback(err, result))](#mongofs-as-storagedriver-transactiontrans-callbackerr-result)
@@ -287,8 +287,8 @@ jsMapper.map({
 });
 ```
 
-<a name="matchmaker"></a>
-# MatchMaker
+<a name="mapmatcher"></a>
+# MapMatcher
 should proxy transactions to the underlying storage.
 
 ```js
@@ -303,7 +303,7 @@ util.seq([
 ], done)();
 ```
 
-<a name="matchmaker-put"></a>
+<a name="mapmatcher-put"></a>
 ## put
 should add a _tasks entry to the result, containing a list of mappings.
 
@@ -384,18 +384,12 @@ util.seq([
 ], done)();
 ```
 
-should create a transaction entry in the _tasks field of the result to add a .d entry in the parent directory if the directory is new.
+should create a .d entry in the parent directory if the directory is new.
 
 ```js
 util.seq([
 		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
-		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction',   // Create a transaction
-		     path: '/new/',         // On the parent directory
-		     put: {'dir.d': {}},    // To add a .d placeholder to indicate this directory (named dir)
-		     _ts: '0100'}
-		]); _(); },
-		
+		function(_) { mm.transaction({path: '/new/', get: ['dir.d']}, _); },
 ], done)();
 ```
 
@@ -495,14 +489,15 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', put: {'b.map': {m:1}}, _ts: '0100'}, _.to('result')); },
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
-			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '0200X'},
+			// The timestamp is a combination of the future .json file and the new .map file
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
 		    ]); _();
 		},
 		
 ], done)();
 ```
 
-<a name="matchmaker-remove"></a>
+<a name="mapmatcher-remove"></a>
 ## remove
 should create an unmap task for each removed .json file, for each existing .map file.
 
@@ -1070,19 +1065,21 @@ should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID]
 ```js
 util.seq([
 		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
-		function(_) { tracker.transaction({path: '/node/node1/', get: ['*.pending'] }, _.to('result')); },
+		function(_) { node1.transaction({path: '/a/b/', put: {'d.map': {bar: 'baz'}}, _ts: '0101'}, _); },
+		function(_) { tracker.transaction({path: '/node/node1/', get: ['*']}, _.to('result')); },
 		function(_) {
 		    var beenThere = false;
 		    for(var key in this.result) {
 			if(key.substr(key.length - 8) == '.pending') {
 			    var task = this.result[key].task;
-			    assert.deepEqual(task, {type: 'transaction',
-						    path: '/a/',
-						    put: {'b.d': {}},
+			    assert.deepEqual(task, {type: 'map',
+						    path: '/a/b/c.json',
+						    content: {foo: 'bar', _ts: '0100'},
+						    map: {bar: 'baz', _ts: '0101'},
 						    _ts: task._ts,
 						    _id: task._id,
 						    _tracking: {path: '/node/node1/',
-								counter: '0100.counter'}});
+								counter: '0101.counter'}});
 			    beenThere = true;
 			}
 		    }

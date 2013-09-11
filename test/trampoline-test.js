@@ -1,6 +1,6 @@
 var Trampoline = require('../trampoline.js').Trampoline;
 var Dispatcher = require('../dispatcher.js').Dispatcher;
-var MatchMaker = require('../matchMaker.js').MatchMaker;
+var MapMatcher = require('../matchMaker.js').MapMatcher;
 var MFS = require('../mongofs.js').MFS;
 var util = require('../util.js');
 var assert = require('assert');
@@ -18,7 +18,7 @@ describe('Trampoline', function() {
             if(err) return done(err);
             coll = db.collection('test');
             storage = new MFS(coll, {maxVers: 2});
-            disp = new Dispatcher(new MatchMaker(storage), mappers);
+            disp = new Dispatcher(new MapMatcher(storage), mappers);
 	    tramp = new Trampoline(disp, 1000);
 	    done();
         });
