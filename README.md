@@ -389,6 +389,7 @@ should create a .d entry in the parent directory if the directory is new.
 ```js
 util.seq([
 		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
+		function(_) { trampoline(this.result._tasks, _); },
 		function(_) { mm.transaction({path: '/new/', get: ['dir.d']}, _); },
 ], done)();
 ```
@@ -428,8 +429,8 @@ util.seq([
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
-		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0100'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0100'},
 		]); _(); },
 		
 ], done)();
@@ -490,7 +491,7 @@ util.seq([
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
 			// The timestamp is a combination of the future .json file and the new .map file
-			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200', _future: true}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
 		    ]); _();
 		},
 		
@@ -1048,6 +1049,59 @@ disp.dispatch({type: 'unmap',
 
 <a name="clusternode"></a>
 # ClusterNode
+should support map of map scenarios.
+
+```js
+node1.start();
+// We build a tweeter-like data model, with /follow/<user>/<followee> files indicating
+// following relationships, /tweet/<user>/* files containing individual tweets, and
+// timelines being mapped to /timeline/<user>/*
+util.seq([
+    function(_) { tweeterExample(_); },
+    function(_) { node1.transaction({path: '/timeline/alice/', get: ['*.json']}, _.to('result')); },
+    function(_) {
+	assert(this.result['0101.json'], 'tweet should exist');
+	assert.equal(this.result['0101.json'].text, 'Hi, I\'m bob');
+	assert.equal(this.result['0101.json'].from, 'bob');
+	_();
+    },
+], done)();
+
+function tweeterExample(done) {
+    var mapFunction = function(path, content) {
+	// Put followee tweets in the follower's timeline
+	var mapTweet = function(path, content) {
+	    var splitPath = path.split('/');
+	    var author = splitPath[2];
+	    emit('/timeline/' + this.follower + '/' + content._ts + '.json', 
+		 {text: content.text, from: author});
+	};
+	// Create a mapping for each following relationship
+	var splitPath = path.split('/');
+	var follower = splitPath[2];
+	var followee = content.who;
+	emit('/tweet/' + followee + '/' + follower + '.map', {
+	    _mapper: 'javascript',
+	    func: mapTweet.toString(),
+	    follower: follower,
+	});
+    };
+    util.seq([
+	function(_) { node1.transaction({path: '/follow/', put: {'tweet.map': {
+	    _mapper: 'javascript',
+	    func: mapFunction.toString(),
+	}}, _ts: '0010'}, _.to('w1')); },
+	function(_) { node1.transaction({path: '/tweet/alice/', put: {'a.json': {text: 'Hi, I\'m alice'}}, _ts: '0100'}, _.to('w2')); },
+	function(_) { node1.transaction({path: '/tweet/bob/', put: {'b.json': {text: 'Hi, I\'m bob'}}, _ts: '0101'}, _.to('w3')); },
+	function(_) { node1.transaction({path: '/follow/alice/', put: {'bob.json': {who: 'bob'}}, _ts: '0123'}, _.to('w4')); },
+	function(_) { node1.wait(this.w1, _); },
+	function(_) { node1.wait(this.w2, _); },
+	function(_) { node1.wait(this.w3, _); },
+	function(_) { node1.wait(this.w4, _); },
+    ], done)();
+}
+```
+
 <a name="clusternode-transactiontrans-callbackerr-result"></a>
 ## transaction(trans, callback(err, result))
 should relay the transaction to the underlying storage (regardless of node).
@@ -1065,21 +1119,18 @@ should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID]
 ```js
 util.seq([
 		function(_) { node1.transaction({path: '/a/b/', put: {'c.json': {foo: 'bar'}}, _ts: '0100'}, _); },
-		function(_) { node1.transaction({path: '/a/b/', put: {'d.map': {bar: 'baz'}}, _ts: '0101'}, _); },
 		function(_) { tracker.transaction({path: '/node/node1/', get: ['*']}, _.to('result')); },
 		function(_) {
 		    var beenThere = false;
 		    for(var key in this.result) {
 			if(key.substr(key.length - 8) == '.pending') {
 			    var task = this.result[key].task;
-			    assert.deepEqual(task, {type: 'map',
-						    path: '/a/b/c.json',
-						    content: {foo: 'bar', _ts: '0100'},
-						    map: {bar: 'baz', _ts: '0101'},
-						    _ts: task._ts,
-						    _id: task._id,
-						    _tracking: {path: '/node/node1/',
-								counter: '0101.counter'}});
+			    assert.deepEqual(task, {type: 'transaction',
+						    path: '/a/',
+						    put: {'b.d': {}},
+						    _ts: '0100',
+						    _tracking: task._tracking,
+						    _id: task._id});
 			    beenThere = true;
 			}
 		    }
@@ -1110,16 +1161,16 @@ should call the callback once all processing for the transaction associated with
 ```js
 node1.start();
 util.seq([
-		function(_) { node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0100'}, _.to('t1')); },
 		function(_) { node1.transaction({path: '/a/', put: {'m.map': {_mapper: 'mirror',
 									      origPath: '/a/',
-									      newPath: '/X/Y/'}}, _ts: '0200'}, _.to('t2')); },
+									      newPath: '/X/Y/'}}, _ts: '0100'}, _.to('t2')); },
+		function(_) { node1.transaction({path: '/a/b/', put: {'a.json': {x:1}, 'b.json': {x:2}}, _ts: '0200'}, _.to('t1')); },
 		function(_) { node1.wait(this.t1, _); },
 		function(_) { node1.wait(this.t2, _); },
 		function(_) { node1.transaction({path: '/X/Y/b/', get: ['*.json']}, _.to('result')); },
 		function(_) {
-		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '0200X'});
-		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '0200X'});
+		    assert.deepEqual(this.result['a.json'], {x:1, _ts: '02000100X', _future: true});
+		    assert.deepEqual(this.result['b.json'], {x:2, _ts: '02000100X', _future: true});
 		    _();
 		},
 ], done)();

@@ -35,6 +35,7 @@ exports.MatchMaker = function(storage) {
 	    }
 	}
 	return function(result) {
+	    completeFutureVersions(result, putCmd);
 	    for(var key in putCmd) {
 		for(var i = 0; i < pairs.length; i++) {
 		    if(endsWith(key, '.' + pairs[i].ext1)) {
@@ -46,25 +47,13 @@ exports.MatchMaker = function(storage) {
 				    cmd: put,
 				    changed: pairs[i].ext1,
 				};
+				if(result[resultKey]._future) {
+				    args._ts = result[resultKey]._ts + trans._ts;
+				}
 				args['key_' + pairs[i].ext1] = key;
 				args['new_' + pairs[i].ext1] = putCmd[key];
 				args['old_' + pairs[i].ext1] = result[key];
 				args['key_' + pairs[i].ext2] = resultKey;
-				args['new_' + pairs[i].ext2] = result[resultKey];
-				args['old_' + pairs[i].ext2] = result[resultKey];
-				pairs[i].handler(result, args);
-			    } else if(endsWith(resultKey, '.' + pairs[i].ext2 + ':latest') &&
-				      !result[resultKey.substr(0, resultKey.length - 7)]) {
-				var args = {
-				    path: trans.path,
-				    _ts: result[resultKey]._ts + trans._ts,
-				    cmd: put,
-				    changed: pairs[i].ext1,
-				};
-				args['key_' + pairs[i].ext1] = key;
-				args['new_' + pairs[i].ext1] = putCmd[key];
-				args['old_' + pairs[i].ext1] = result[key];
-				args['key_' + pairs[i].ext2] = resultKey.substr(0, resultKey.length - 7);
 				args['new_' + pairs[i].ext2] = result[resultKey];
 				args['old_' + pairs[i].ext2] = result[resultKey];
 				pairs[i].handler(result, args);
@@ -88,6 +77,7 @@ exports.MatchMaker = function(storage) {
 	    }
 	}
 	return function(result) {
+	    completeFutureVersions(result, {});
 	    for(var i = 0; i < removeCmd.length; i++) {
 		var key = removeCmd[i];
 		for(var j = 0; j < pairs.length; j++) {
@@ -101,22 +91,11 @@ exports.MatchMaker = function(storage) {
 				    cmd: remove,
 				    changed: pair.ext1,
 				};
+				if(result[resultKey]._future) {
+				    args._ts = result[resultKey]._ts + trans._ts
+				}
 				args['key_' + pair.ext1] = key;
 				// new value is left undefined
-				args['old_' + pair.ext1] = result[key];
-				args['key_' + pair.ext2] = resultKey;
-				args['new_' + pair.ext2] = result[resultKey];
-				args['old_' + pair.ext2] = result[resultKey];
-				pair.handler(result, args);
-			    } else if(endsWith(resultKey, '.' + pair.ext2 + ':latest') &&
-				      !result[resultKey.substr(0, resultKey.length - 7)]) {
-				var args = {
-				    path: trans.path,
-				    _ts: result[resultKey]._ts + trans._ts,
-				    cmd: remove,
-				    changed: pair.ext1,
-				};
-				args['key_' + pair.ext1] = key;
 				args['old_' + pair.ext1] = result[key];
 				args['key_' + pair.ext2] = resultKey;
 				args['new_' + pair.ext2] = result[resultKey];
@@ -144,6 +123,18 @@ exports.MatchMaker = function(storage) {
 	}
     }
 
+    function completeFutureVersions(result, putCmd) {
+	var suffix = ':latest';
+	for(var key in result) {
+	    if(endsWith(key, suffix)) {
+		var origKey = key.substr(0, key.length - suffix.length);
+		if(!result[origKey] && !putCmd[origKey]) {
+		    result[origKey] = result[key];
+		    result[origKey]._future = true;
+		}
+	    }
+	}
+    }
 };
 
 exports.SubdirNotifier = function(storage) {
@@ -160,9 +151,9 @@ exports.SubdirNotifier = function(storage) {
 		var parsed = util.parsePath(path);
 		var put = {};
 		put[parsed.fileName + '.d'] = {};
-		self.transaction({path: parsed.dirPath, put: put, _ts: trans._ts}, util.protect(callback, function() {
-		    callback(undefined, result);
-		}));
+		if(!result._tasks) result._tasks = [];
+		result._tasks.push({type: 'transaction', path: parsed.dirPath, put: put, _ts: trans._ts});
+		callback(undefined, result);
 	    } else {
 		callback(undefined, result);
 	    }
@@ -196,7 +187,7 @@ exports.MapMatcher = function(storage) {
 	    createTask(result, {type: 'transaction',
 				path: args.path + args.key_d.replace(/\.d$/, '/'),
 				put: put,
-				_ts: args._ts});
+				_ts: args.new_map._ts});
 	} else {
 	    createTask(result, {type: 'transaction',
 				path: args.path + args.key_d.replace(/\.d$/, '/'),
@@ -210,51 +201,6 @@ exports.MapMatcher = function(storage) {
     };
 
 
-    this.handle_remove = function(trans, remove) {
-	var removeCmd = trans[remove];
-	for(var i = 0; i < removeCmd.length; i++) {
-	    var key = removeCmd[i];
-	    if(endsWith(key, '.json')) {
-		addToGet(trans, '*.map');
-		addToGet(trans, key);
-	    } else if(endsWith(key, '.map')) {
-		addToGet(trans, '*.json');
-		addToGet(trans, '*.d');
-		addToGet(trans, key);
-	    }
-	}
-	return function(result) {
-	    for(var i = 0; i < removeCmd.length; i++) {
-		var key = removeCmd[i];
-		if(endsWith(key, '.json')) {
-		    for(var resultKey in result) {
-			if(endsWith(resultKey, '.map')) {
-			    createTask(result, {type: 'unmap',
-						path: trans.path + key,
-						content: result[key],
-						map: result[resultKey],
-						_ts: trans._ts});
-			}
-		    }
-		} else if(endsWith(key, '.map')) {
-		    for(var resultKey in result) {
-			if(endsWith(resultKey, '.json')) {
-			    createTask(result, {type: 'unmap',
-						path: trans.path + resultKey,
-						content: result[resultKey],
-						map: result[key],
-						_ts: trans._ts});
-			} else if(endsWith(resultKey, '.d')) {
-			    createTask(result, {type: 'transaction',
-						path: trans.path + resultKey.replace(/\.d$/, '/'),
-						remove: [key],
-						_ts: trans._ts});
-			}
-		    }
-		}
-	    }
-	};
-    };
     function createTask(result, task) {
 	if(!result._tasks) result._tasks = [];
 	result._tasks.push(task);

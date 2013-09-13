@@ -116,6 +116,7 @@ describe('MapMatcher', function() {
 	it('should create a .d entry in the parent directory if the directory is new', function(done) {
 	    util.seq([
 		function(_) { mm.transaction({path: '/new/dir/', put: {a:{}}, _ts: '0100'}, _.to('result')); },
+		function(_) { trampoline(this.result._tasks, _); },
 		function(_) { mm.transaction({path: '/new/', get: ['dir.d']}, _); },
 	    ], done)();
 	});
@@ -149,8 +150,8 @@ describe('MapMatcher', function() {
 		function(_) { mm.transaction({path: '/a/b/', put: {'foo.map':{m:1}, 'bar.map': {m:2}}, _ts: '0100'}, _); },
 		function(_) { mm.transaction({path: '/a/b/', put: {'c.d': {}}, _ts: '0101'}, _.to('result')); },
 		function(_) { assert.deepEqual(this.result._tasks, [
-		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0101'},
-		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0101'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'bar.map': {m:2, _ts: '0100'}}, _ts: '0100'},
+		    {type: 'transaction', path: '/a/b/c/', put: {'foo.map': {m:1, _ts: '0100'}}, _ts: '0100'},
 		]); _(); },
 		
 	    ], done)();
@@ -202,7 +203,7 @@ describe('MapMatcher', function() {
 		function(_) {
 		    assert.deepEqual(this.result._tasks, [
 			// The timestamp is a combination of the future .json file and the new .map file
-			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200'}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
+			{type: 'map', path: '/a/b/a.json', content: {x:1, _ts: '0200', _future: true}, map: {m:1, _ts: '0100'}, _ts: '02000100X'},
 		    ]); _();
 		},
 		
