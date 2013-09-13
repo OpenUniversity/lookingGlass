@@ -221,4 +221,17 @@ describe('ClusterNode', function() {
 	    },
 	], done)();	
     });
+    it('should cover nodes cyclicly', function(done) {
+	node3.start(); // node1 has not be started.  It is considered to be down.
+	util.seq([
+	    function(_) { tweeterExample(node1, _); },
+	    function(_) { node1.transaction({path: '/follow/alice/', remove: ['bob.json']}, _.to('w1')); },
+	    function(_) { node3.wait(this.w1, _); },
+	    function(_) { node3.transaction({path: '/timeline/alice/', get: ['*.json']}, _.to('result')); },
+	    function(_) {
+		assert(!this.result['0101.json'], 'Bob\'s tweet should not be found there');
+		_();
+	    },
+	], done)();	
+    });
 });

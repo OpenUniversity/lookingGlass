@@ -124,8 +124,9 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 		index++;
 	    }
 	    for(var i = 0; i < nodesCovered; i++) {
-		if(peers[index + i]) {
-		    coveredPaths[i] = '/node/' + peers[index + i].replace(/\.d$/, '/');
+		var peersIndex = (index + i) % peers.length;
+		if(peers[peersIndex]) {
+		    coveredPaths[i] = '/node/' + peers[peersIndex].replace(/\.d$/, '/');
 		} else {
 		    coveredPaths[i] = undefined;
 		}
