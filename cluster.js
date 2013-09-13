@@ -1,22 +1,45 @@
 var util = require('./util.js');
 var assert = require('assert');
+var SubdirNotifier = require('./matchMaker.js').SubdirNotifier;
+var Trampoline = require('./trampoline.js').Trampoline;
+var Dispatcher = require('./dispatcher.js').Dispatcher;
 
 exports.ClusterNode = function(disp, tracker, nodeID) {
     var self = this;
     var trackerPath = '/node/' + nodeID + '/';
-    var worker = new util.Worker(tick, 10);
     var PENDING_EXT = '.pending';
     var WIP_EXT = '.wip';
     var waitInterval = 20;
-    this.stop = function() { worker.stop(); };
-    this.start = function() { worker.start(); };
+    var workerInterval = 20;
+    var nodesCovered = 2;
+    var peerFinderInterval = 100;
+    var workers = [];
+    var coveredPaths = new Array(nodesCovered);
+    var peerFinder = new util.Worker(findPeers, peerFinderInterval);
+    var tracker = new SubdirNotifier(tracker);
+    tracker = new Dispatcher(tracker, {});
+    tracker = new Trampoline(tracker, 1000);
+    
+    var workers = [];
+    for(var i = 0; i < nodesCovered + 1; i++) {
+	workers.push(createWorker(i-1));
+    }
+
+    this.stop = function() {
+	workers.forEach(function(w) {w.stop()});
+	peerFinder.stop();
+    };
+    this.start = function() {
+	workers.forEach(function(w) {w.start()});
+	peerFinder.start();
+    };
     this.transaction = function(trans, callback) {
 	disp.transaction(trans, util.protect(callback, function(err, result) {
 	    if(result._tasks) {
 		var tasks = result._tasks;
 		delete result._tasks;
 		result._tracking = {path: trackerPath, counter: trans._ts + '.counter'};
-		replaceDoneWithNewTasks(undefined, tasks, result._tracking, util.protect(callback, function() {
+		replaceDoneWithNewTasks(trackerPath, undefined, tasks, result._tracking, util.protect(callback, function() {
 		    callback(undefined, result);
 		}));
 	    } else {
@@ -25,15 +48,15 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	}));
     };
 
-    function tick(callback) {
+    function tick(trackerPath, callback) {
 	util.seq([
 	    function(_) { tracker.transaction({path: trackerPath, getIfExists: ['*.pending']}, _.to('result')); },
 	    function(_) { this.task = findPendingTask(this.result); _(); },
 	    function(_) { if(this.task) _(); else callback(); },
-	    function(_) { markTaskInProgress(this.task, _.to('result')); },
+	    function(_) { markTaskInProgress(trackerPath, this.task, _.to('result')); },
 	    function(_) { if(this.result[this.task._id + PENDING_EXT]) _(); else callback(); },
 	    function(_) { disp.dispatch(this.task, _.to('tasks')); },
-	    function(_) { replaceDoneWithNewTasks(this.task, this.tasks, this.task._tracking, _); },
+	    function(_) { replaceDoneWithNewTasks(trackerPath, this.task, this.tasks, this.task._tracking, _); },
 	], callback)();
     }
 
@@ -44,7 +67,7 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    }
 	}
     }
-    function markTaskInProgress(task, callback) {
+    function markTaskInProgress(trackerPath, task, callback) {
 	var put = {};
 	put[task._id + WIP_EXT] = {task: task};
 	tracker.transaction({path: trackerPath,
@@ -52,7 +75,7 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 			     put: put,
 			     getIfExists: [task._id + PENDING_EXT]}, callback);
     }
-    function replaceDoneWithNewTasks(doneTask, newTasks, tracking, callback) {
+    function replaceDoneWithNewTasks(trackerPath, doneTask, newTasks, tracking, callback) {
 	assert(tracking);
 	var trans = {path: trackerPath, accum: {}};
 	var counter = 0;
@@ -86,4 +109,36 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    function(_) { if(this.result[trackingInfo.counter] > 0) self.wait(result, callback); else _(); },
 	], callback)();
     };
+    function createWorker(index) {
+	return new util.Worker(function(_) {
+	    var path = index < 0 ? trackerPath : coveredPaths[index];
+	    if(!path) return _();
+	    tick(path, _);
+	}, workerInterval);
+    }
+    function findPeers(callback) {
+	tracker.transaction({path: '/node/', getIfExists: ['*.d']}, util.protect(callback, function(err, result) {
+	    var peers = listFilesWithSuffix(result, '.d');
+	    var index = 0;
+	    while(index < peers.length && nodeID >= peers[index]) {
+		index++;
+	    }
+	    for(var i = 0; i < nodesCovered; i++) {
+		if(peers[index + i]) {
+		    coveredPaths[i] = '/node/' + peers[index + i].replace(/\.d$/, '/');
+		} else {
+		    coveredPaths[i] = undefined;
+		}
+	    }
+	}));
+    }
+    function listFilesWithSuffix(result, suffix) {
+	var keys = [];
+	for(var key in result) {
+	    if(key.substr(key.length - suffix.length) == suffix) {
+		keys.push(key);
+	    }
+	}
+	return keys;
+    }
 };

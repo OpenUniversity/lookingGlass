@@ -61,6 +61,8 @@
     Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should be referred to the corresponding mapper, returning transactions with remove operations
     Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number: [2K[0G  ․ Dispatcher dispatch(task, callback(err, tasks)) unmap should return an accum transaction with negative increment, if the mapper returns content as a number
     ClusterNode should support map of map scenarios: [2K[0G  ․ ClusterNode should support map of map scenarios
+    ClusterNode should unmap when a file creating a mapping, is removed: [2K[0G  ․ ClusterNode should unmap when a file creating a mapping, is removed
+    ClusterNode should cover for work by the following two cluster nodes (two being configurable) in lexicographic order: [2K[0G  ․ ClusterNode should cover for work by the following two cluster nodes (two being configurable) in lexicographic order
     ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node): [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should relay the transaction to the underlying storage (regardless of node)
     ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending: [2K[0G  ․ ClusterNode transaction(trans, callback(err, result)) should write returned tasks to the tracker, in the form: /node/[nodeID]/[taskID].pending
     ClusterNode start() should cause the node to automatically take .pending tasks and execute them: [2K[0G  ․ ClusterNode start() should cause the node to automatically take .pending tasks and execute them
@@ -81,5 +83,5 @@
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  81 passing (1 seconds)
+  83 passing (2 seconds)
 

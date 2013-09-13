@@ -1057,7 +1057,7 @@ node1.start();
 // following relationships, /tweet/<user>/* files containing individual tweets, and
 // timelines being mapped to /timeline/<user>/*
 util.seq([
-    function(_) { tweeterExample(_); },
+    function(_) { tweeterExample(node1, _); },
     function(_) { node1.transaction({path: '/timeline/alice/', get: ['*.json']}, _.to('result')); },
     function(_) {
 	assert(this.result['0101.json'], 'tweet should exist');
@@ -1067,7 +1067,7 @@ util.seq([
     },
 ], done)();
 
-function tweeterExample(done) {
+function tweeterExample(node, done) {
     var mapFunction = function(path, content) {
 	// Put followee tweets in the follower's timeline
 	var mapTweet = function(path, content) {
@@ -1087,19 +1087,51 @@ function tweeterExample(done) {
 	});
     };
     util.seq([
-	function(_) { node1.transaction({path: '/follow/', put: {'tweet.map': {
+	function(_) { node.transaction({path: '/follow/', put: {'tweet.map': {
 	    _mapper: 'javascript',
 	    func: mapFunction.toString(),
 	}}, _ts: '0010'}, _.to('w1')); },
-	function(_) { node1.transaction({path: '/tweet/alice/', put: {'a.json': {text: 'Hi, I\'m alice'}}, _ts: '0100'}, _.to('w2')); },
-	function(_) { node1.transaction({path: '/tweet/bob/', put: {'b.json': {text: 'Hi, I\'m bob'}}, _ts: '0101'}, _.to('w3')); },
-	function(_) { node1.transaction({path: '/follow/alice/', put: {'bob.json': {who: 'bob'}}, _ts: '0123'}, _.to('w4')); },
-	function(_) { node1.wait(this.w1, _); },
-	function(_) { node1.wait(this.w2, _); },
-	function(_) { node1.wait(this.w3, _); },
-	function(_) { node1.wait(this.w4, _); },
+	function(_) { node.transaction({path: '/tweet/alice/', put: {'a.json': {text: 'Hi, I\'m alice'}}, _ts: '0100'}, _.to('w2')); },
+	function(_) { node.transaction({path: '/tweet/bob/', put: {'b.json': {text: 'Hi, I\'m bob'}}, _ts: '0101'}, _.to('w3')); },
+	function(_) { node.transaction({path: '/follow/alice/', put: {'bob.json': {who: 'bob'}}, _ts: '0123'}, _.to('w4')); },
+	function(_) { node.wait(this.w1, _); },
+	function(_) { node.wait(this.w2, _); },
+	function(_) { node.wait(this.w3, _); },
+	function(_) { node.wait(this.w4, _); },
     ], done)();
 }
+```
+
+should unmap when a file creating a mapping, is removed.
+
+```js
+node1.start();
+util.seq([
+    function(_) { tweeterExample(node1, _); },
+    function(_) { node1.transaction({path: '/follow/alice/', remove: ['bob.json']}, _.to('w1')); },
+    function(_) { node1.wait(this.w1, _); },
+    function(_) { node1.transaction({path: '/timeline/alice/', get: ['*.json']}, _.to('result')); },
+    function(_) {
+	assert(!this.result['0101.json'], 'Bob\'s tweet should not be found there');
+	_();
+    },
+], done)();
+```
+
+should cover for work by the following two cluster nodes (two being configurable) in lexicographic order.
+
+```js
+node1.start(); // node3 has not be started.  It is considered to be down.
+util.seq([
+    function(_) { tweeterExample(node3, _); },
+    function(_) { node3.transaction({path: '/follow/alice/', remove: ['bob.json']}, _.to('w1')); },
+    function(_) { node1.wait(this.w1, _); },
+    function(_) { node1.transaction({path: '/timeline/alice/', get: ['*.json']}, _.to('result')); },
+    function(_) {
+	assert(!this.result['0101.json'], 'Bob\'s tweet should not be found there');
+	_();
+    },
+], done)();
 ```
 
 <a name="clusternode-transactiontrans-callbackerr-result"></a>
