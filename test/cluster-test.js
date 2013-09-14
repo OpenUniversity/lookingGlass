@@ -1,4 +1,3 @@
-var Trampoline = require('../trampoline.js').Trampoline;
 var Dispatcher = require('../dispatcher.js').Dispatcher;
 var MapMatcher = require('../matchMaker.js').MapMatcher;
 var MFS = require('../mongofs.js').MFS;
@@ -45,10 +44,11 @@ describe('ClusterNode', function() {
 	    function(_) { collTracker.remove({}, _); },
 	], done)();
     });
-    afterEach(function() {
+    afterEach(function(done) {
 	node1.stop();
 	node2.stop();
 	node3.stop();
+	setTimeout(done, 100);
     });
     describe('transaction(trans, callback(err, result))', function() {
 	it('should relay the transaction to the underlying storage (regardless of node)', function(done) {

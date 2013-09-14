@@ -1,0 +1,21 @@
+{
+	"_mapper": "javascript",
+	"func": "function(path, content) {
+		// Put followee tweets in the follower's timeline
+		var mapTweet = function(path, content) {
+		    var splitPath = path.split('/');
+		    var author = splitPath[2];
+		    emit('/timeline/' + this.follower + '/' + content._ts + '.json', 
+			 {text: content.text, from: author});
+		};
+		// Create a mapping for each following relationship
+		var splitPath = path.split('/');
+		var follower = splitPath[2];
+		var followee = content.who;
+		emit('/tweet/' + followee + '/' + follower + '.map', {
+		    _mapper: 'javascript',
+		    func: mapTweet.toString(),
+		    follower: follower,
+		});
+	}",
+}

@@ -1,0 +1,49 @@
+<html>
+  <head>
+    <style type="text/css">
+      .subdir { padding-left: 0.5em;
+		display: none;
+	      }
+    </style>
+  </head>
+  <body>
+    <script language="javascript" src="/js/jquery-1.10.2.min.js"></script>
+    <script language="javascript">
+      function updateDir(target, path) {
+	  $.get(path, function(dir) {
+	      for(var key in dir) {
+		  appendFileToDir(path, key, dir[key], target);
+	      }
+	      target.show('slow');
+	  });
+      }
+      function appendFileToDir(path, key, ts, target) {
+	  if(key.match(/\.d$/)) {
+	      appendSubDir(path, key.replace(/\.d$/, '/'), target);
+	  } else {
+	      target.append($('<div class="file" path="' + path + key + '">' + key + '</div>'));
+	  }
+      }
+      function appendSubDir(path, key, target) {
+	  var dir = $('<div class="directory"><div class="dir-name">' + key + '</div><div class="subdir"/></div>');
+	  dir.click(function(ev) {
+	      var subdir = $(this).find('.subdir');
+	      if(ev.target == $(this).find('.dir-name')[0]) {
+		  if(subdir.html() == '') {
+		      updateDir(subdir, path + key);
+		  } else {
+		      subdir.toggle('slow');
+		  }
+	      }
+	  });
+	  target.append(dir);
+      }
+      $(function() {
+	  updateDir($('#directory'), '/');
+      });
+    </script>
+    <h1>Hello, World</h1>
+    <div id="directory"/>
+    <a href="/tweet-example.html">Tweet Example</a>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<html>
+  <body>
+    <script language="javascript" src="/js/jquery-1.10.2.min.js"></script>
+    <div>
+      I am <input type="text" id="name"/>, and I say <input type="text" id="text"/>
+      <input type="button" id="tweet"/>
+    </div>
+    <div>
+      I follow <input type="text" id="followee"/> <input type="button" id="follow"/>
+    </div>
+    <h2>Timeline</h2>
+    <div id="timeline"/>
+    <script language="javascript">
+      $(function() {
+	  $('#tweet').click(function() {
+	      var tweet = {text: $('#text').val()};
+	      var path = '/tweet/' + $('#name').val() + '/' + Math.floor(Math.random() * 10000) + '.json';
+	      $.ajax(path, {
+		  contentType: 'application/json',
+		  type: 'PUT',
+		  data: JSON.stringify(tweet),
+		  success: function() {
+		      $('#text').val('');
+		  },
+		  error: function(xhr, textStatus, err) {
+		      alert(textStatus + '\n' + err);
+		  }
+	      });
+	  });
+	  $('#follow').click(function() {
+	      var follow = {who: $('#followee').val()};
+	      var path = '/followers/' + $('#name').val() + '/' + follow.who + '.json';
+	      $.ajax(path, {
+		  contentType: 'application/json',
+		  type: 'PUT',
+		  data: JSON.stringify(follow),
+		  success: function() {
+		      $('#followee').val('');
+		  },
+		  error: function(xhr, textStatus, err) {
+		      alert(textStatus + '\n' + err);
+		  }
+	      });
+	  });
+	  setInterval(function() {
+	      var user = $('#name').val();
+	      if(!user || user == '') return;
+	      var trans = {getIfExists: ['*.json']};
+	      var path = '/timeline/' + user + '/';
+	      $.ajax(path, {
+		  contentType: 'application/json',
+		  type: 'POST',
+		  data: JSON.stringify(trans),
+		  success: function(dir) {
+		      $('#timeline').html('<h2>' + user + '\'s Timeline</h2>');
+		      for(var key in dir) {
+			  if(!key.match(/\.json$/)) continue;
+			  var tweet = dir[key];
+			  $('#timeline').append('<div>' + tweet.from + ' said ' + tweet.text + '</div>');
+		      }
+		  },
+		  error: function(xhr, textStatus, err) {
+		      $('timeline').html(textStatus + err);
+		  }
+	      });
+	  }, 1000);
+      });
+    </script>
+  </body>
+</html>

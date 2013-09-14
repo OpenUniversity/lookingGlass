@@ -10,13 +10,13 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
     var PENDING_EXT = '.pending';
     var WIP_EXT = '.wip';
     var waitInterval = 20;
-    var workerInterval = 20;
+    var workerInterval = 100;
     var nodesCovered = 2;
-    var peerFinderInterval = 100;
+    var peerFinderInterval = 200;
     var workers = [];
     var coveredPaths = new Array(nodesCovered);
     var peerFinder = new util.Worker(findPeers, peerFinderInterval);
-    var tracker = new SubdirNotifier(tracker);
+    tracker = new SubdirNotifier(tracker);
     tracker = new Dispatcher(tracker, {});
     tracker = new Trampoline(tracker, 1000);
     
