@@ -154,6 +154,22 @@ describe('lookingGlass RESTful API', function() {
 		},
 	    ], done)();
 	});
+	it('should return an object containing all matching files, when given a wildcard of the form [path]/*.[suffix]', function(done) {
+	    util.seq([
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {put: {'a.json': {hello: 'world'}}, _ts: "0100"}, _); },
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {put: {'b.json': {hola: 'mondi'}}, _ts: "0101"}, _); },
+		function(_) { util.httpJsonReq('POST', 'http://localhost:47837/some/dir/', {put: {'c.foo': {shalom: 'olam'}}, _ts: "0102"}, _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/*.json', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    var resp = JSON.parse(this.resp);
+		    assert.deepEqual(resp['a.json'], {hello: 'world', _ts: '0100'});
+		    assert.deepEqual(resp['b.json'], {hola: 'mondi', _ts: '0101'});
+		    assert(!resp['c.foo'], 'c.foo does not match *.json');
+		    _();
+		},
+	    ], done)();
+	});
     });
     describe('DELETE', function() {
 	var URL = 'http://localhost:47837/foo/bar';

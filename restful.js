@@ -79,18 +79,21 @@ exports.LookingGlassServer = function(disp, port) {
 			throw err;
 		    }
 		}
-		
-		var content = result[parsed.fileName];
-		var contentType = 'application/json';
-		if(content._content_type) {
-		    contentType = content._content_type;
-		    content = new Buffer(content._content, 'base64');
+		if(parsed.fileName.charAt(0) == '*') {
+		    res.writeHead(200, {'Content-Type': contentType});
+		    res.end(JSON.stringify(result));		    
 		} else {
-		    content = JSON.stringify(content);
+		    var content = result[parsed.fileName];
+		    var contentType = 'application/json';
+		    if(content._content_type) {
+			contentType = content._content_type;
+			content = new Buffer(content._content, 'base64');
+		    } else {
+			content = JSON.stringify(content);
+		    }
+		    res.writeHead(200, {'Content-Type': contentType});
+		    res.end(content);
 		}
-		res.writeHead(200, {'Content-Type': contentType});
-		res.end(content);
-		return;
 	    } catch(e) {
 		callback(e);
 	    }
