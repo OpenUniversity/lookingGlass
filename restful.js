@@ -129,6 +129,7 @@ exports.LookingGlassServer = function(disp, port) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
 	    var dir = {};
 	    for(file in result) {
+		if(typeof(result[file]) != 'object') continue;
 		dir[file] = result[file]._ts;
 	    }
 	    res.end(JSON.stringify(dir));
