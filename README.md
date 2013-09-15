@@ -24,6 +24,7 @@
          - [tsCond](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-tscond)
          - [accum](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accum)
          - [accumReset](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-accumreset)
+         - [ifChancedSince](#mongofs-as-storagedriver-transactiontrans-callbackerr-result-ifchancedsince)
    - [Dispatcher](#dispatcher)
      - [transaction(trans, callback(err, result))](#dispatcher-transactiontrans-callbackerr-result)
      - [dispatch(task, callback(err, tasks))](#dispatcher-dispatchtask-callbackerr-tasks)
@@ -707,6 +708,28 @@ util.seq([
 ], done)();
 ```
 
+should return the timestamp of the last change to the directory, regardless of the files being queried for.
+
+```js
+var now = util.timeUid();
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS < now, 'it must be earlier than the present');
+			    _();
+			},
+			// We make a change to an unrelated file in the same directory
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS > now, 'it must be later than the beginning of the test');
+			    _();
+			},
+], done)();
+```
+
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-put"></a>
 #### put
 should write a file so that "get" retrieves it.
@@ -798,6 +821,28 @@ util.seq([
 			function(_) {
 			    assert(this.result['foo.a'], 'foo.a should be included in the results');
 			    assert(!this.result['bar.b'], 'bar.b was not included in the query');
+			    _();
+			},
+], done)();
+```
+
+should return the timestamp of the last change to the directory, regardless of the files being queried for.
+
+```js
+var now = util.timeUid();
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['somethingThatDoesNotExist']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS < now, 'it must be earlier than the present');
+			    _();
+			},
+			// We make a change to an unrelated file in the same directory
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['somethingThatDoesNotExist']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS > now, 'it must be later than the beginning of the test');
 			    _();
 			},
 ], done)();
@@ -895,6 +940,39 @@ util.seq([
         assert.equal(this.resultAfterReset.BER, 6);
         _();
     },
+], done)();
+```
+
+<a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result-ifchancedsince"></a>
+#### ifChancedSince
+should perform the query only if the directory's _lastChangeTS is no longer the one given.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['c'], ifChangedSince: this.result._lastChangeTS}, _.to('result2')); },
+			// getIfExists should be used here because with 'get' the user always expects value, or else an error is thrown.
+			function(_) {
+			    assert(!this.result2.c, 'the second query should not have been done');
+			    assert.equal(this.result2._noChangesSince, this.result._lastChangeTS);
+			    _();
+			},
+], done)();
+```
+
+should allow the query if changes have been made to the directory.
+
+```js
+util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['c'], ifChangedSince: this.result._lastChangeTS}, _.to('result2')); },
+			// getIfExists should be used here because with 'get' the user always expects value, or else an error is thrown.
+			function(_) {
+			    assert(this.result2.c, 'the second query should be performed as usual');
+			    assert(!this.result2._noChangesSince, 'there should not be an indication of no changes');
+			    _();
+			},
 ], done)();
 ```
 

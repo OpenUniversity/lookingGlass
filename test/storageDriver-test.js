@@ -105,6 +105,25 @@ function describeStorageDriver(driverContainer) {
 			},
 		    ], done)();
 		});
+		it('should return the timestamp of the last change to the directory, regardless of the files being queried for', function(done) {
+		    var now = util.timeUid();
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS < now, 'it must be earlier than the present');
+			    _();
+			},
+			// We make a change to an unrelated file in the same directory
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS > now, 'it must be later than the beginning of the test');
+			    _();
+			},
+		    ], done)();
+		});
             });
             describe('put', function() {
                 it('should write a file so that "get" retrieves it', function(done) {
@@ -224,6 +243,25 @@ function describeStorageDriver(driverContainer) {
 			},
 		    ], done)();
 		});
+		it('should return the timestamp of the last change to the directory, regardless of the files being queried for', function(done) {
+		    var now = util.timeUid();
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['somethingThatDoesNotExist']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS < now, 'it must be earlier than the present');
+			    _();
+			},
+			// We make a change to an unrelated file in the same directory
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['somethingThatDoesNotExist']}, _.to('result')); },
+			function(_) {
+			    assert(this.result._lastChangeTS, 'a timestamp must exist');
+			    assert(this.result._lastChangeTS > now, 'it must be later than the beginning of the test');
+			    _();
+			},
+		    ], done)();
+		});
             });
 	    describe('getLatest', function() {
 		it('should return the latest version of each file, regardless of the transaction timestamp', function(done) {
@@ -302,6 +340,33 @@ function describeStorageDriver(driverContainer) {
                     ], done)();
                 });
             });
+	    describe('ifChancedSince', function() {
+		it('should perform the query only if the directory\'s _lastChangeTS is no longer the one given', function(done) {
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['c'], ifChangedSince: this.result._lastChangeTS}, _.to('result2')); },
+			// getIfExists should be used here because with 'get' the user always expects value, or else an error is thrown.
+			function(_) {
+			    assert(!this.result2.c, 'the second query should not have been done');
+			    assert.equal(this.result2._noChangesSince, this.result._lastChangeTS);
+			    _();
+			},
+		    ], done)();
+		});
+		it('should allow the query if changes have been made to the directory', function(done) {
+		    util.seq([
+			function(_) { driver.transaction({path: '/a/b/', get: ['c']}, _.to('result')); },
+			function(_) { driver.transaction({path: '/a/b/', put: {foo: {bar: 'baz'}}}, _); },
+			function(_) { driver.transaction({path: '/a/b/', getIfExists: ['c'], ifChangedSince: this.result._lastChangeTS}, _.to('result2')); },
+			// getIfExists should be used here because with 'get' the user always expects value, or else an error is thrown.
+			function(_) {
+			    assert(this.result2.c, 'the second query should be performed as usual');
+			    assert(!this.result2._noChangesSince, 'there should not be an indication of no changes');
+			    _();
+			},
+		    ], done)();
+		});
+	    });
         });
     });
 }

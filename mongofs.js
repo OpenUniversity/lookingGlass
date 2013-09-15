@@ -143,11 +143,17 @@ MFS.prototype.transaction = function(trans, callback) {
         callback(undefined, result);
     });
     if(hasFields(update)) {
+	updateTimestamp(update);
         this.coll.findAndModify(query, {_id:1}, update, {safe: true, upsert: (trans.tsCond?false:true), fields: fields}, post);
     } else {
         this.coll.findOne(query, fields, post);
     }
 };
+
+function updateTimestamp(update) {
+    if(!update.$set) update.$set = {};
+    update.$set._lastChangeTS = util.timeUid();
+}
 
 MFS.prototype.accessField = function(name, doc) {
     var fieldParts = this.mongoField(name).split('.');
@@ -166,8 +172,10 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
 	if(get[i].substr(0, 2) == '*.') __ = true;
         fields[this.mongoField(get[i])] = 1;
     }
+    fields._lastChangeTS = 1;
     var self = this;
     return function(path, doc, result) {
+	result._lastChangeTS = doc._lastChangeTS;
         for(var i = 0; i < get.length; i++) {
 	    var key = get[i];
             var field = self.accessField(key, doc);
@@ -279,6 +287,7 @@ MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {
     this.trans_get(get, update, fields, ts);
     var self = this;
     return function(path, doc, result) {
+	result._lastChangeTS = doc._lastChangeTS;
         for(var i = 0; i < get.length; i++) {
             var field = self.accessField(get[i], doc);
 	    if(!field) continue;
@@ -357,6 +366,15 @@ MFS.prototype.trans_accumReset = function(accumReset, update, fields, ts, query)
 		result[key] = 0;
 	    }
         }
+    };
+};
+
+MFS.prototype.trans_ifChangedSince = function(ifChangedSince, update, fields, ts, query) {
+    query._lastChangeTS = {$ne: ifChangedSince};
+    return function(path, doc, result) {
+	if(!doc._lastChangeTS) {
+	    result._noChangesSince = ifChangedSince;
+	}
     };
 };
 

@@ -126,6 +126,7 @@ exports.MatchMaker = function(storage) {
     function completeFutureVersions(result, putCmd) {
 	var suffix = ':latest';
 	for(var key in result) {
+	    if(typeof(result[key]) != 'object') continue;
 	    if(endsWith(key, suffix)) {
 		var origKey = key.substr(0, key.length - suffix.length);
 		if(!result[origKey] && !putCmd[origKey]) {
