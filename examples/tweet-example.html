@@ -42,15 +42,13 @@
 		  }
 	      });
 	  });
+	  var lastEtag;
 	  setInterval(function() {
 	      var user = $('#name').val();
 	      if(!user || user == '') return;
-	      var trans = {getIfExists: ['*.json']};
 	      var path = '/timeline/' + user + '/';
-	      $.ajax(path, {
-		  contentType: 'application/json',
-		  type: 'POST',
-		  data: JSON.stringify(trans),
+	      $.ajax(path + '*.json', {
+		  type: 'GET',
 		  success: function(dir) {
 		      $('#timeline').html('<h2>' + user + '\'s Timeline</h2>');
 		      for(var key in dir) {

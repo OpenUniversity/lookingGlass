@@ -47,10 +47,21 @@ exports.ClusterNode = function(disp, tracker, nodeID) {
 	    }
 	}));
     };
+    
+    var lastChange = {};
+    function queryIfChanged(trans) {
+	if(lastChange[trans.path]) {
+	    trans.ifChangedSince = lastChange[trans.path];
+	}
+    }
 
     function tick(trackerPath, callback) {
+	var trans = {path: trackerPath, getIfExists: ['*.pending']};
 	util.seq([
-	    function(_) { tracker.transaction({path: trackerPath, getIfExists: ['*.pending']}, _.to('result')); },
+	    function(_) { queryIfChanged(trans); _(); },
+	    function(_) { tracker.transaction(trans, _.to('result')); },
+	    function(_) { if(this.result._noChangesSince) callback(); else _(); },
+	    function(_) { lastChange[trackerPath] = this.result._lastChangeTS; _(); },
 	    function(_) { this.task = findPendingTask(this.result); _(); },
 	    function(_) { if(this.task) _(); else callback(); },
 	    function(_) { markTaskInProgress(trackerPath, this.task, _.to('result')); },

@@ -21,6 +21,7 @@ util.seq([
         var coll = this.db.collection('storage');
         var collTracker = this.db.collection('tracker');
         var storage = new MFS(coll, {maxVers: maxVers});
+//	storage = new util.TracingDispatcher(storage, 'STORAGE');
         var tracker = new MFS(collTracker, {maxVers: 1});
 	var matcher = new MapMatcher(storage);
         var disp = new Dispatcher(matcher, mappers);

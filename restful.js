@@ -68,18 +68,20 @@ exports.LookingGlassServer = function(disp, port) {
 	if(parsed.fileName == '') {
 	    return this.do_getDir(req, res, data, callback);
 	}
-	disp.transaction({path: parsed.dirPath, get:[parsed.fileName]}, function(err, result) {
+	var trans = {path: parsed.dirPath, getIfExists:[parsed.fileName]};
+	if(lastEtag(req)) {
+	    trans.ifChangedSince = lastEtag(req);
+	}
+	disp.transaction(trans, function(err, result) {
 	    try {
 		if(err) {
 		    if(err.fileNotFound) {
-			res.writeHead(404, {'content-type': 'text/plain'});
-			res.end(err.toString());
-			return;
+			return handleFileNotFound(err, res);
 		    } else {
 			throw err;
 		    }
 		}
-		if(notModified(req, result)) {
+		if(result._noChangesSince) {
 		    res.writeHead(304, {'content-type': 'text/plain'});
 		    res.end();
 		    return;
@@ -91,6 +93,7 @@ exports.LookingGlassServer = function(disp, port) {
 		    res.end(JSON.stringify(result));		    
 		} else {
 		    var content = result[parsed.fileName];
+		    if(!content) return handleFileNotFound(new Error('File Not Found: ' + path), res);
 		    if(content._content_type) {
 			headers['Content-Type'] = content._content_type;
 			content = new Buffer(content._content, 'base64');
@@ -122,7 +125,7 @@ exports.LookingGlassServer = function(disp, port) {
     };
     this.do_getDir = function(req, res, data, callback) {
 	var path = req.url;
-	disp.transaction({path: path, get:['*']}, util.protect(callback, function(err, result) {
+	disp.transaction({path: path, getIfExists:['*']}, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
 	    var dir = {};
 	    for(file in result) {
@@ -131,9 +134,14 @@ exports.LookingGlassServer = function(disp, port) {
 	    res.end(JSON.stringify(dir));
 	}));
     }
-    function notModified(req, result) {
+    function lastEtag(req) {
 	var ifNoneMatch = req.headers['if-none-match'];
 	if(!ifNoneMatch) return false;
-	return ifNoneMatch == '"' + result._lastChangeTS + '"';
+	if(ifNoneMatch.charAt(0) != '"' || ifNoneMatch.charAt(ifNoneMatch.length-1) != '"') return false;
+	return ifNoneMatch.substr(1, ifNoneMatch.length-2);
+    }
+    function handleFileNotFound(err, res) {
+	res.writeHead(404, {'content-type': 'text/plain'});
+	res.end(err.toString());
     }
 };
