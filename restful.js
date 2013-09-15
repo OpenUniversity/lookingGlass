@@ -79,19 +79,25 @@ exports.LookingGlassServer = function(disp, port) {
 			throw err;
 		    }
 		}
+		if(notModified(req, result)) {
+		    res.writeHead(304, {'content-type': 'text/plain'});
+		    res.end();
+		    return;
+		}
+		var headers = {'Content-Type': 'application/json', 
+			       'ETag': '"' + result._lastChangeTS + '"'};
 		if(parsed.fileName.charAt(0) == '*') {
-		    res.writeHead(200, {'Content-Type': contentType});
+		    res.writeHead(200, headers);
 		    res.end(JSON.stringify(result));		    
 		} else {
 		    var content = result[parsed.fileName];
-		    var contentType = 'application/json';
 		    if(content._content_type) {
-			contentType = content._content_type;
+			headers['Content-Type'] = content._content_type;
 			content = new Buffer(content._content, 'base64');
 		    } else {
 			content = JSON.stringify(content);
 		    }
-		    res.writeHead(200, {'Content-Type': contentType});
+		    res.writeHead(200, headers);
 		    res.end(content);
 		}
 	    } catch(e) {
@@ -124,5 +130,10 @@ exports.LookingGlassServer = function(disp, port) {
 	    }
 	    res.end(JSON.stringify(dir));
 	}));
+    }
+    function notModified(req, result) {
+	var ifNoneMatch = req.headers['if-none-match'];
+	if(!ifNoneMatch) return false;
+	return ifNoneMatch == '"' + result._lastChangeTS + '"';
     }
 };

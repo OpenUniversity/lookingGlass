@@ -159,12 +159,13 @@ exports.Worker = function(f, interval, maxInstances) {
     };
 };
 
-exports.httpJsonReq = function(method, URL, content, callback) {
+exports.httpJsonReq = function(method, URL, content, callback, headers) {
     var http = require('http');
     var url = require('url');
     var parsedURL = url.parse(URL);
     var client = http.createClient(parsedURL.port, parsedURL.hostname);
-    var headers = {host: parsedURL.host};
+    var headers = headers || {};
+    headers.host = parsedURL.host;
     if(content) {
 	headers['content-type'] = 'application/json';
     }

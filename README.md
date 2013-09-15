@@ -1563,12 +1563,43 @@ util.seq([
 		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/some/dir/*.json', undefined, _.to('statusCode', 'headers', 'resp')); },
 		function(_) {
 		    assert.equal(this.statusCode, 200);
-		    var resp = JSON.parse(this.resp);
+		    var resp = this.resp;
 		    assert.deepEqual(resp['a.json'], {hello: 'world', _ts: '0100'});
 		    assert.deepEqual(resp['b.json'], {hola: 'mondi', _ts: '0101'});
 		    assert(!resp['c.foo'], 'c.foo does not match *.json');
 		    _();
 		},
+], done)();
+```
+
+should return an ETag header, which is a valid timeUid.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/foo.json', {bar: 'baz'}, _); },
+		function(_) { util.httpJsonReq('GET',  'http://localhost:47837/some/dir/foo.json', undefined, _.to('status', 'headers', 'resp')); },
+		function(_) {
+		    assert(this.headers.etag, 'there should be an ETag header');
+		    var etag = this.headers.etag;
+		    assert.equal(etag.charAt(0), '"');
+		    assert.equal(etag.charAt(etag.length - 1), '"');
+		    var ts = etag.substr(1, etag.length - 2);
+		    assert(ts < util.timeUid(), 'etag time should be in the past');
+		    _();
+		},
+], done)();
+```
+
+should accept the "if-none-match" header, and on a match to the etag value, should return status 304 not modified.
+
+```js
+util.seq([
+		function(_) { util.httpJsonReq('PUT', 'http://localhost:47837/some/dir/foo.json', {bar: 'baz'}, _); },
+		function(_) { util.httpJsonReq('GET',  'http://localhost:47837/some/dir/foo.json', undefined, _.to('status', 'headers', 'resp')); },
+		function(_) { this.etag = this.headers.etag; _(); },
+		function(_) { util.httpJsonReq('GET',  'http://localhost:47837/some/dir/foo.json', undefined, _.to('status', 'headers', 'resp'),
+					       {'if-none-match': this.etag}); },
+		function(_) { assert.equal(this.status, 304); _(); },
 ], done)();
 ```
 

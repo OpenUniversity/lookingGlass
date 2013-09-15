@@ -87,8 +87,10 @@
     lookingGlass RESTful API GET should retrieve the content of a directory, if the path ends with a slash: [2K[0G  ․ lookingGlass RESTful API GET should retrieve the content of a directory, if the path ends with a slash
     lookingGlass RESTful API GET should provide timestamps for each file when retrieving a directory: [2K[0G  ․ lookingGlass RESTful API GET should provide timestamps for each file when retrieving a directory
     lookingGlass RESTful API GET should return an object containing all matching files, when given a wildcard of the form [path]/*.[suffix]: [2K[0G  ․ lookingGlass RESTful API GET should return an object containing all matching files, when given a wildcard of the form [path]/*.[suffix]
+    lookingGlass RESTful API GET should return an ETag header, which is a valid timeUid: [2K[0G  ․ lookingGlass RESTful API GET should return an ETag header, which is a valid timeUid
+    lookingGlass RESTful API GET should accept the "if-none-match" header, and on a match to the etag value, should return status 304 not modified: [2K[0G  ․ lookingGlass RESTful API GET should accept the "if-none-match" header, and on a match to the etag value, should return status 304 not modified
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  90 passing (8 seconds)
+  92 passing (8 seconds)
 
