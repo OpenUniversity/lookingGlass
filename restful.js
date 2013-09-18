@@ -86,7 +86,7 @@ exports.LookingGlassServer = function(disp, port) {
 		    }
 		}
 		if(result._noChangesSince) {
-		    res.writeHead(304, {'content-type': 'text/plain'});
+		    res.writeHead(304, {});
 		    res.end();
 		    return;
 		}

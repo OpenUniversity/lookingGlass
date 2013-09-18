@@ -21,7 +21,9 @@ function mapFunc(path, content) {
     });
 }
 
-util.httpJsonReq('PUT', 'http://localhost:8080/followers/tweet.map', map, function(err) {
+var host = process.argv[2] || 'localhost:8080';
+
+util.httpJsonReq('PUT', 'http://' + host + '/followers/tweet.map', map, function(err) {
     if(err) console.error(err);
     else console.log('done');
 });
