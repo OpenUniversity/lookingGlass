@@ -1439,7 +1439,7 @@ util.seq([
 # lookingGlass RESTful API
 <a name="lookingglass-restful-api-put"></a>
 ## PUT
-should stopre JSON object so that GET can retrieve them.
+should stope JSON object so that GET can retrieve them.
 
 ```js
 var URL = 'http://localhost:47837/foo/bar';
@@ -1473,6 +1473,16 @@ function storeFileWithContentType(contentType, content, done) {
 		    resp.on('end', done);
 		});
 }
+```
+
+should ignore attributes of the content-type header when considering whether to store an object as JSON.
+
+```js
+util.seq([
+		function(_) { storeFileWithContentType('application/json; charset=utf-8', '{"foo": "bar"}', _); },
+		function(_) { storage.transaction({path:'/a/b/', get: ['foo.txt']}, _.to('result')); },
+		function(_) { assert.equal(this.result['foo.txt'].foo, 'bar'); _(); },
+], done)();
 ```
 
 <a name="lookingglass-restful-api-get"></a>
@@ -1600,6 +1610,21 @@ util.seq([
 		function(_) { util.httpJsonReq('GET',  'http://localhost:47837/some/dir/foo.json', undefined, _.to('status', 'headers', 'resp'),
 					       {'if-none-match': this.etag}); },
 		function(_) { assert.equal(this.status, 304); _(); },
+], done)();
+```
+
+should gracefully ignore query strings in the URL.
+
+```js
+util.seq([
+		function(_) { storeFileWithContentType('text/foobar', 'FOO-BAR', _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/a/b/foo.txt?foo=bar&baz=bat', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.headers['content-type'], 'text/foobar');
+		    assert.equal(this.resp, 'FOO-BAR');
+		    _();
+		},
 ], done)();
 ```
 

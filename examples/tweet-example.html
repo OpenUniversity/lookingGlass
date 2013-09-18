@@ -1,5 +1,16 @@
 <html>
+  <head>
+    <style type="text/css">
+      body {
+	  background-color: #85A3FF;
+      }
+      #left-pane {
+	  vertical-align: top;
+      }
+    </style>
+  </head>
   <body>
+    <h1> Hello, <span id="user"></span></h1>
     <!--script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js" type="text/javascript" charset="utf-8"></script-->
     <script src="http://code.jquery.com/jquery-1.10.2.js" type="text/javascript" charset="utf-8"></script>
     <script language="javascript" src="/js/agility.min.js"></script>
@@ -22,15 +33,16 @@
       <div id="timeline-container-template">
 	<div>
 	  <h1>Timeline</h1>
-	  <ul class="content" data-type="timeline"></ul>
+	  <table class="content" data-type="timeline"></table>
 	</div>
       </div>
 
-      <div id="timeline-template">
-	<li><span data-bind="from"></span> says <span data-bind="text"></span>
-	  <button class="remove">x</button>
-	</li>
-      </div>
+      <table id="timeline-template">
+	<tr>
+	  <td><span data-bind="from"></span> Says <span data-bind="text"></span></td>
+	  <td><button class="remove">x</button></td>
+	</tr>
+      </table>
 
       <div id="tweet-container-template">
 	<div>
@@ -47,15 +59,24 @@
 	</li>
       </div>
     </div>
-    <div>
-      Name: <input type="text" id="name"/>
-    </div>
-    <div id="app"/>
+    <table id="tweeter-app"><tr>
+	<td id="left-pane"/>
+	<td id="right-pane"/>
+    </tr></table>
     <script language="javascript">
+      function getParameterByName(name) {
+	  name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	  var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+	  results = regex.exec(location.search);
+	  return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
       $(function() {
-	  createSynchedContainer('#timeline-container-template', '#app', '/timeline/Boaz/', '*.json', {});
-	  createSynchedContainer('#tweet-container-template', '#app', '/tweet/Boaz/', '*.json', {});
-	  createSynchedContainer('#follow-container-template', '#app', '/followers/Boaz/', '*.json', {});
+	  var user = getParameterByName('user');
+	  if(!user) return;
+	  $('#user').html(user);
+	  createSynchedContainer('#timeline-container-template', '#left-pane', '/timeline/' + user + '/', '*.json', {});
+	  createSynchedContainer('#tweet-container-template', '#right-pane', '/tweet/' + user + '/', '*.json', {});
+	  createSynchedContainer('#follow-container-template', '#right-pane', '/followers/' + user + '/', '*.json', {});
       });
     </script>
   </body>

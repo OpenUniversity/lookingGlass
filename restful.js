@@ -1,14 +1,16 @@
 var util = require('./util.js');
 var http = require('http');
+var urlParser = require('url');
 
 exports.LookingGlassServer = function(disp, port) {
     var self = this;
     var server = http.createServer(function(req, res) {
-	console.log('Got ' + req.method + ' ' + req.url);
         var reqContent = '';
+	var contentType = req.headers['content-type'];
+	if(contentType) contentType = contentType.split(';')[0];
         util.seq([
             function(_) {
-		if(req.headers['content-type'] == 'application/json') {
+		if(contentType == 'application/json') {
                     req.setEncoding('utf8');
 		} else {
                     req.setEncoding('base64');
@@ -19,7 +21,7 @@ exports.LookingGlassServer = function(disp, port) {
             function(_) { 
 		var methodName = 'do_' + req.method;
 		var json = '';
-		if(req.headers['content-type'] == 'application/json') {
+		if(contentType == 'application/json') {
 		    json = JSON.parse(reqContent);
 		} else if(reqContent != '') {
 		    json = reqContent;
@@ -34,6 +36,7 @@ exports.LookingGlassServer = function(disp, port) {
             },
         ], function(err) {
             res.writeHead(500, {'Content-Type': 'text/plain'});
+	    console.error(err.stack);
             res.end(err.stack);
         })();	
     });
@@ -47,7 +50,7 @@ exports.LookingGlassServer = function(disp, port) {
     };
     
     this.do_PUT = function(req, res, data, callback) {
-	var path = req.url;
+	var path = urlParser.parse(req.url).pathname;
 	var parsed = util.parsePath(path);
 	var put = {};
 	if(typeof(data) == 'string') {
@@ -64,7 +67,7 @@ exports.LookingGlassServer = function(disp, port) {
 	}));
     };
     this.do_GET = function(req, res, data, callback) {
-	var path = req.url;
+	var path = urlParser.parse(req.url).pathname;
 	var parsed = util.parsePath(path);
 	if(parsed.fileName == '') {
 	    return this.do_getDir(req, res, data, callback);
@@ -110,7 +113,7 @@ exports.LookingGlassServer = function(disp, port) {
 	});
     };
     this.do_DELETE = function(req, res, data, callback) {
-	var path = req.url;
+	var path = urlParser.parse(req.url).pathname;
 	var parsed = util.parsePath(path);
 	disp.transaction({path: parsed.dirPath, remove: [parsed.fileName]}, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
@@ -118,14 +121,14 @@ exports.LookingGlassServer = function(disp, port) {
 	}));
     };
     this.do_POST = function(req, res, data, callback) {
-	data.path = req.url;
+	data.path = urlParser.parse(req.url).pathname;
 	var tracking = disp.transaction(data, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
 	    res.end(JSON.stringify(result));
 	}));
     };
     this.do_getDir = function(req, res, data, callback) {
-	var path = req.url;
+	var path = urlParser.parse(req.url).pathname;
 	disp.transaction({path: path, getIfExists:['*']}, util.protect(callback, function(err, result) {
 	    res.writeHead(200, {'Content-Type': 'application/json'});
 	    var dir = {};

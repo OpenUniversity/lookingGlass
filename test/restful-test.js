@@ -22,14 +22,14 @@ var mappers = {
 };
 
 describe('lookingGlass RESTful API', function() {
-    var storageColl, trackerColl, server;
+    var storageColl, trackerColl, server, storage;
     before(function(done) {
 	util.seq([
             function(_) { require("mongodb").MongoClient.connect('mongodb://127.0.0.1:27017/test', _.to('db')); },
             function(_) {
                 storageColl = this.db.collection('storage');
                 trackerColl = this.db.collection('tracker');
-                var storage = new MFS(storageColl, {maxVers: 2});
+                storage = new MFS(storageColl, {maxVers: 2});
 //		storage = new util.TracingDispatcher(storage, 'STOR');
                 var tracker = new MFS(trackerColl, {maxVers: 2});
                 var disp = new Dispatcher(storage, mappers);
@@ -51,7 +51,7 @@ describe('lookingGlass RESTful API', function() {
 	], done)();
     });
     describe('PUT', function() {
-	it('should stopre JSON object so that GET can retrieve them', function(done) {
+	it('should stope JSON object so that GET can retrieve them', function(done) {
 	    var URL = 'http://localhost:47837/foo/bar';
 	    util.seq([
 		function(_) { util.httpJsonReq('PUT', URL, {
@@ -80,6 +80,14 @@ describe('lookingGlass RESTful API', function() {
 		    resp.on('end', done);
 		});
 	    }
+	});
+	it('should ignore attributes of the content-type header when considering whether to store an object as JSON', function(done) {
+	    util.seq([
+		function(_) { storeFileWithContentType('application/json; charset=utf-8', '{"foo": "bar"}', _); },
+		function(_) { storage.transaction({path:'/a/b/', get: ['foo.txt']}, _.to('result')); },
+		function(_) { assert.equal(this.result['foo.txt'].foo, 'bar'); _(); },
+	    ], done)();
+	    
 	});
     });
     function storeFileWithContentType(contentType, content, done) {
@@ -193,6 +201,18 @@ describe('lookingGlass RESTful API', function() {
 		function(_) { util.httpJsonReq('GET',  'http://localhost:47837/some/dir/foo.json', undefined, _.to('status', 'headers', 'resp'),
 					       {'if-none-match': this.etag}); },
 		function(_) { assert.equal(this.status, 304); _(); },
+	    ], done)();
+	});
+	it('should gracefully ignore query strings in the URL', function(done) {
+	    util.seq([
+		function(_) { storeFileWithContentType('text/foobar', 'FOO-BAR', _); },
+		function(_) { util.httpJsonReq('GET', 'http://localhost:47837/a/b/foo.txt?foo=bar&baz=bat', undefined, _.to('statusCode', 'headers', 'resp')); },
+		function(_) {
+		    assert.equal(this.statusCode, 200);
+		    assert.equal(this.headers['content-type'], 'text/foobar');
+		    assert.equal(this.resp, 'FOO-BAR');
+		    _();
+		},
 	    ], done)();
 	});
     });
