@@ -1,0 +1,47 @@
+<html>
+<body>
+<!--script language="javascript" src="http://localhost:8080/js/jquery-1.10.2.min.js"></script-->
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+<script language="javascript" src="agility.min.js"></script>
+<script language="javascript">
+    var list;
+    $(function() {
+	var item = $$({}, $('#item-template').html(), {
+	    'click button.kill': function() {
+		this.destroy();
+	    },
+	    'click span': function() {
+		this.view.$('span').hide();
+		this.view.$('input').show().select();
+	    },
+	    'blur input': function() {
+		this.view.$('span').show();
+		this.view.$('input').hide();
+	    },
+	});
+	list = $$({}, $('#list-template').html(), {
+	    'click .add-item': function() {
+		var newItem = $$(item, {value: 'foo'});
+		this.append(newItem, 'ul');
+	    },
+	});
+	$$.document.append(list);
+    });
+</script>
+<div style="display:none;">
+  <div id="item-template">
+    <li>
+      <input type="text" data-bind="value" style="display:none;"/>
+      <span data-bind="value"></span>
+      <button class="kill">x</button>
+    </li>
+  </div>
+  <div id="list-template">
+    <div>
+      <button class="add-item">+</button>
+      <ul></ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

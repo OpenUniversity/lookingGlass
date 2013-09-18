@@ -4,6 +4,7 @@ var http = require('http');
 exports.LookingGlassServer = function(disp, port) {
     var self = this;
     var server = http.createServer(function(req, res) {
+	console.log('Got ' + req.method + ' ' + req.url);
         var reqContent = '';
         util.seq([
             function(_) {

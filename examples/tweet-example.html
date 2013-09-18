@@ -1,66 +1,61 @@
 <html>
   <body>
-    <script language="javascript" src="/js/jquery-1.10.2.min.js"></script>
-    <div>
-      I am <input type="text" id="name"/>, and I say <input type="text" id="text"/>
-      <input type="button" id="tweet"/>
+    <!--script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js" type="text/javascript" charset="utf-8"></script-->
+    <script src="http://code.jquery.com/jquery-1.10.2.js" type="text/javascript" charset="utf-8"></script>
+    <script language="javascript" src="/js/agility.min.js"></script>
+    <script language="javascript" src="/js/agility-adapter.js"></script>
+    <div style="display:none;">
+      <!-- Templates -->
+
+      <div id="follow-container-template">
+	<div>
+	  <h1>Following</h1>
+	  <button class="create" data-new="{who:'user'}">Follow Another</button>
+	  <ul class="content" data-type="follow"></ul>
+	</div>
+      </div>
+
+      <div id="follow-template">
+	<li><input type="text" data-bind="who"/><button class="remove">x</button></li>
+      </div>
+
+      <div id="timeline-container-template">
+	<div>
+	  <h1>Timeline</h1>
+	  <ul class="content" data-type="timeline"></ul>
+	</div>
+      </div>
+
+      <div id="timeline-template">
+	<li><span data-bind="from"></span> says <span data-bind="text"></span>
+	  <button class="remove">x</button>
+	</li>
+      </div>
+
+      <div id="tweet-container-template">
+	<div>
+	  <h1>My Tweets</h1>
+	  <button class="create" data-new="{text:'What\'s on your mind?'}">New Tweet</button>
+	  <ul class="content" data-type="tweet"></ul>
+	</div>
+      </div>
+
+      <div id="tweet-template">
+	<li>
+	  <input type="text" data-bind="text"/>
+	  <button class="remove">x</button>
+	</li>
+      </div>
     </div>
     <div>
-      I follow <input type="text" id="followee"/> <input type="button" id="follow"/>
+      Name: <input type="text" id="name"/>
     </div>
-    <div id="timeline"/>
+    <div id="app"/>
     <script language="javascript">
       $(function() {
-	  $('#tweet').click(function() {
-	      var tweet = {text: $('#text').val()};
-	      var path = '/tweet/' + $('#name').val() + '/' + Math.floor(Math.random() * 10000) + '.json';
-	      $.ajax(path, {
-		  contentType: 'application/json',
-		  type: 'PUT',
-		  data: JSON.stringify(tweet),
-		  success: function() {
-		      $('#text').val('');
-		  },
-		  error: function(xhr, textStatus, err) {
-		      alert(textStatus + '\n' + err);
-		  }
-	      });
-	  });
-	  $('#follow').click(function() {
-	      var follow = {who: $('#followee').val()};
-	      var path = '/followers/' + $('#name').val() + '/' + follow.who + '.json';
-	      $.ajax(path, {
-		  contentType: 'application/json',
-		  type: 'PUT',
-		  data: JSON.stringify(follow),
-		  success: function() {
-		      $('#followee').val('');
-		  },
-		  error: function(xhr, textStatus, err) {
-		      alert(textStatus + '\n' + err);
-		  }
-	      });
-	  });
-	  var lastEtag;
-	  setInterval(function() {
-	      var user = $('#name').val();
-	      if(!user || user == '') return;
-	      var path = '/timeline/' + user + '/';
-	      $.ajax(path + '*.json', {
-		  type: 'GET',
-		  success: function(dir) {
-		      $('#timeline').html('<h2>' + user + '\'s Timeline</h2>');
-		      for(var key in dir) {
-			  if(!key.match(/\.json$/)) continue;
-			  var tweet = dir[key];
-			  $('#timeline').append('<div>' + tweet.from + ' said ' + tweet.text + '</div>');
-		      }
-		  },
-		  error: function(xhr, textStatus, err) {
-		      $('timeline').html(textStatus + err);
-		  }
-	      });
-	  }, 1000);
+	  createSynchedContainer('#timeline-container-template', '#app', '/timeline/Boaz/', '*.json', {});
+	  createSynchedContainer('#tweet-container-template', '#app', '/tweet/Boaz/', '*.json', {});
+	  createSynchedContainer('#follow-container-template', '#app', '/followers/Boaz/', '*.json', {});
       });
     </script>
   </body>
