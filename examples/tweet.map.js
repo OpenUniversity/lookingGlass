@@ -19,6 +19,10 @@ function mapFunc(path, content) {
 	func: mapTweet.toString(),
 	follower: follower,
     });
+    emit('/timeline/' + followee + '/' + follower + '.isFollowing.json', {
+	type: 'is-following',
+	who: follower,
+    });
 }
 
 var host = process.argv[2] || 'localhost:8080';

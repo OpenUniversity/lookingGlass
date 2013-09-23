@@ -38,6 +38,7 @@ function createSynchedContainer(templateSelector, containerSelector, path, query
 		    if(remote._ts > local._ts) {
 			remote._name = name;
 			this.model.set(remote, {silent: true});
+			this.view.sync();
 		    }
 		    delete dir[name];
 		} else {

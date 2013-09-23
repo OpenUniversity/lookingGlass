@@ -151,7 +151,7 @@ exports.SubdirNotifier = function(storage) {
 		var path = trans.path.substr(0, trans.path.length - 1);
 		var parsed = util.parsePath(path);
 		var put = {};
-		put[parsed.fileName + '.d'] = {};
+		put[parsed.fileName + '.d'] = {dir: parsed.fileName};
 		if(!result._tasks) result._tasks = [];
 		result._tasks.push({type: 'transaction', path: parsed.dirPath, put: put, _ts: trans._ts});
 		callback(undefined, result);

@@ -58,9 +58,6 @@ exports.LookingGlassServer = function(disp, port) {
 	}
 	put[parsed.fileName] = data;
 	var trans = {path: parsed.dirPath, put: put};
-/*	if(data._ts) {
-	    trans._ts = data._ts;
-	}*/
 	disp.transaction(trans, util.protect(callback, function(err, result) {
 	    res.writeHead(201, {'Content-Type': 'application/json'});
 	    res.end(JSON.stringify(result));

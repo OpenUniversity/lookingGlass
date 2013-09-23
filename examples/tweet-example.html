@@ -5,7 +5,15 @@
 	  background-color: #85A3FF;
       }
       #left-pane {
-	  vertical-align: top;
+	  vertical-align: top;<cite></cite>
+      }
+      .username {
+	  color: blue;
+	  font-weight: bold;
+	  cursor: pointer;
+      }
+      .username:hover {
+	  color: cyan;
       }
     </style>
   </head>
@@ -39,7 +47,14 @@
 
       <table id="timeline-template">
 	<tr>
-	  <td><span data-bind="from"></span> Says <span data-bind="text"></span></td>
+	  <td><span class="username" data-bind="from"></span> Says <span data-bind="text"></span></td>
+	  <td><button class="remove">x</button></td>
+	</tr>
+      </table>
+
+      <table id="is-following-template">
+	<tr>
+	  <td>Congratulations! <span class="username" data-bind="who"></span> is following you!</td>
 	  <td><button class="remove">x</button></td>
 	</tr>
       </table>
@@ -58,6 +73,22 @@
 	  <button class="remove">x</button>
 	</li>
       </div>
+
+      <div id="user-profile-container-template">
+	<div>
+	  <div class="content" data-type="user-profile">
+	    <button class="create" data-new="{username: '', fullname: '', aboutMe: ''}">Create Profile</button>
+	  </div>
+	</div>
+      </div>
+      <div id="user-profile-template">
+	<table>
+	  <tr><td>Username:</td><td><input type="text" data-bind="username"/></td></tr>
+	  <tr><td>Full Name:</td><td><input type="text" data-bind="fullname"/></td></tr>
+	  <tr><td>About Me:</td><td><input type="textarea" data-bind="aboutMe"/></td></tr>
+	  <tr><td/><td><button class="remove">Delete Profile</button></td></tr>
+	</table>
+      </div>
     </div>
     <table id="tweeter-app"><tr>
 	<td id="left-pane"/>
@@ -75,8 +106,21 @@
 	  if(!user) return;
 	  $('#user').html(user);
 	  createSynchedContainer('#timeline-container-template', '#left-pane', '/timeline/' + user + '/', '*.json', {});
+	  createSynchedContainer('#user-profile-container-template', '#right-pane', '/profile/' + user + '/', '*.json', {});
 	  createSynchedContainer('#tweet-container-template', '#right-pane', '/tweet/' + user + '/', '*.json', {});
 	  createSynchedContainer('#follow-container-template', '#right-pane', '/followers/' + user + '/', '*.json', {});
+	  
+	  $('body').on('click', '.username', function() {
+	      var profilePane = $(this).find('.user-profile');
+	      if(profilePane.length == 0) {
+		  var id = Math.floor(Math.random() * 10000) + '';
+		  var otherUser = $(this).html();
+		  $(this).append('<div id="' + id + '" class="user-profile" style="display:none;"/>');
+		  createSynchedContainer('#user-profile-container-template', '#' + id, '/profile/' + otherUser + '/', '*.json', {});
+		  profilePane = $(this).find('.user-profile');
+	      }
+	      profilePane.toggle('slow');
+	  });
       });
     </script>
   </body>
