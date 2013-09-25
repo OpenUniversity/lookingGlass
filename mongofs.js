@@ -69,7 +69,6 @@ MFS.prototype.accessField = function(name, doc) {
 
 MFS.prototype.trans_get = function(get, update, fields, ts) {
     for(var i = 0; i < get.length; i++) {
-	if(get[i].substr(0, 2) == '*.') __ = true;
         fields[this.mongoField(get[i])] = 1;
     }
     fields._lastChangeTS = 1;
@@ -176,11 +175,19 @@ MFS.prototype.throwFileNotFoundException = function(path) {
 }
 
 MFS.prototype.trans_remove = function(remove, update, fields, ts) {
-    var put = {};
-    for(var i = 0; i < remove.length; i++) {
-        put[remove[i]] = {_dead:1};
+    if(this.maxVers > 1) {
+	var put = {};
+	for(var i = 0; i < remove.length; i++) {
+            put[remove[i]] = {_dead:1};
+	}
+	return this.trans_put(put, update, fields, ts);
+    } else {
+	if(!update.$unset) update.$unset = {};
+	for(var i = 0; i < remove.length; i++) {
+            update.$unset[this.mongoField(remove[i])] = 0;
+	}
+	return function() {};
     }
-    return this.trans_put(put, update, fields, ts);
 };
 
 MFS.prototype.trans_getIfExists = function(get, update, fields, ts) {

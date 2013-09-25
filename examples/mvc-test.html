@@ -51,12 +51,32 @@
   </table>
 </div>
 
+<div class="template" id="test-result-template">
+  <div>
+    [<span data-bind="type"></span>] <span data-bind="summary"></span>
+  </div>
+</div>
+
+<div class="template" id="profile-search-result-template">
+  <div>
+    [User Profile] <span data-bind="user"></span> (<span data-bind="realName"></span>)
+  </div>
+</div>
+
+<div class="template" id="tweet-search-result-template">
+  <div>
+    [Tweet] <span data-bind="user"></span> says <span data-bind="text"></span>
+  </div>
+</div>
+
+<div class="form">
 <h1>This is a test</h1>
+<p>User Name: <input type="text" data-bind="user"/><button class="refresh">Login</button></p>
 <table><tr>
 	<td>
 		<table id="timeline"
 			class="container" 
-			data-path="/timeline/Boaz/*.json" 
+			data-path="/timeline/{user}/*.json" 
 			data-type="timeline"
 			data-interval="2000">
 		  <tr class="show-if-empty">
@@ -66,17 +86,22 @@
 	</td>
 	<td>
 		<button class="create" data-container="#my-tweets" data-new="text: ''">What's on you mind?</button>
-		<table id="my-tweets" class="container" data-path="/tweet/Boaz/*.json" data-type="tweet"></table>
+		<table id="my-tweets" class="container" data-path="/tweet/{user}/*.json" data-type="tweet"></table>
 	</td>
 	<td>
 		<button class="create" data-container="#follow">Follow Another Dude or Gal</button>
-		<table id="follow" class="container" data-path="/followers/Boaz/*.json" data-type="follow">
+		<table id="follow" class="container" data-path="/followers/{user}/*.json" data-type="follow">
 		  <tr class="show-if-empty"><td>You really should follow someone</td></tr>
 		</table>
 	</td>
-	<td id="profile" class="container" data-path="/profile/Boaz.json" data-type="profile">
-	  <button class="show-if-empty create" data-container="#profile" data-new="user: 'Boaz'" data-key="Boaz.json">Create Profile</button>
+	<td id="profile" class="container" data-path="/profile/{user}.json" data-type="profile">
+	  <button class="show-if-empty create" data-container="#profile" data-new="user: '{user}'">Create Profile</button>
+	</td>
+	<td class="form">
+	  <p>Search: <input type="text" data-bind="search"/><button class="refresh">Go!</button></p>
+	  <div class="container" data-path="/keywords/{search}/*.json" data-type="search-result"/>
 	</td>
 </tr></table>
+</div>
 </body>
 </html>
