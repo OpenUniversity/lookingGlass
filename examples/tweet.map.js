@@ -14,6 +14,7 @@ function mapFunc(path, content) {
     var splitPath = path.split('/');
     var follower = splitPath[2];
     var followee = content.who;
+    if(!followee) return;
     emit('/tweet/' + followee + '/' + follower + '.map', {
 	_mapper: 'javascript',
 	func: mapTweet.toString(),

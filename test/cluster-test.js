@@ -69,7 +69,7 @@ describe('ClusterNode', function() {
 			    var task = this.result[key].task;
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
-						    put: {'b.d': {}},
+						    put: {'b.d': {dir: 'b'}},
 						    _ts: '0100',
 						    _tracking: task._tracking,
 						    _id: task._id});
