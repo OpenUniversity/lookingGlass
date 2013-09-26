@@ -93,18 +93,29 @@ MFS.prototype.trans_get = function(get, update, fields, ts) {
 };
 
 MFS.prototype.addSubFields = function(obj, suffix, ts, result) {
+    var foundSomething = false;
     for(var key in obj) {
-	var name = key + suffix;
+	var name;
+	if(key == '!') {
+	    assert.equal(suffix.charAt(0), '.');
+	    name = suffix.substr(1);
+	} else if(key == '^') {
+	    name = suffix;
+	} else {
+	    name = key + suffix;
+	}
 	var child = obj[key];
 	if(Array.isArray(child)) {
 	    var latest = getLatestVersionAsOf(child, ts);
 	    if(!latest._dead) {
 		result[this.encoder.decode(name)] = latest;
+		foundSomething = true;
 	    }
 	} else if(typeof(child) == 'object') {
-	    this.addSubFields(child, '.' + name, ts, result);
+	    foundSomething = this.addSubFields(child, '.' + name, ts, result) || foundSomething;
 	}
     }
+    return foundSomething;
 };
 
 function getLatestVersionAsOf(vers, ts) {
@@ -138,13 +149,23 @@ function removeFieldsStartingWith(obj, prefix) {
 
 MFS.prototype.mongoField = function(field) {
     var comp = field.split('.');
+    var multiple = false;
     if(comp[0] == '*') {
 	comp.shift();
+	multiple = true;
     }
     comp.reverse();
     var self = this;
     comp = comp.map(function(x) { return self.encoder.encode(x); });
-    return comp.join('.');
+    comp = comp.map(function(x) {
+	if(x == '') return '^';
+	return x;
+    });
+    if(!multiple) {
+	comp.push('!');
+    }
+    var mongoField = comp.join('.');
+    return mongoField;
 }
 
 MFS.prototype.trans_put = function(put, update, fields, ts) {

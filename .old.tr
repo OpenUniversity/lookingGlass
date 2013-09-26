@@ -31,6 +31,8 @@
     MapMatcher remove should create an unmap task for each removed .map file, for each existing .json file: [2K[0G  ․ MapMatcher remove should create an unmap task for each removed .map file, for each existing .json file
     MapMatcher remove should create transaction tasks to remove .map files from child directories, when a .map file is removed: [2K[0G  ․ MapMatcher remove should create transaction tasks to remove .map files from child directories, when a .map file is removed
     MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*): [2K[0G  ․ MongoFS as StorageDriver should support any kind of characters in paths, with the exception that slash (/) and star (*)
+    MongoFS as StorageDriver should properly handle file names starting with a dot (.): [2K[0G  ․ MongoFS as StorageDriver should properly handle file names starting with a dot (.)
+    MongoFS as StorageDriver should handle the case where one file name is a suffix of the other: [2K[0G  ․ MongoFS as StorageDriver should handle the case where one file name is a suffix of the other
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should allow for multiple get and put operations to be performed atomically
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) should retrieve the value with the highest _ts value
     MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the value of a file: [2K[0G  ․ MongoFS as StorageDriver .transaction(trans, callback(err, result)) get should retrieve the value of a file
@@ -94,5 +96,5 @@
     lookingGlass RESTful API DELETE should remove a file as response to a DELETE request: [2K[0G  ․ lookingGlass RESTful API DELETE should remove a file as response to a DELETE request
     lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request: [2K[0G  ․ lookingGlass RESTful API POST should perform the transaction enclosed in the body of the request
 
-  94 passing (8 seconds)
+  96 passing (8 seconds)
 

@@ -33,7 +33,7 @@ function tweetText(path, content) {
 							   path: path, 
 							   content: content,
 							   type: 'tweet-search-result',
-							   user: sender});
+							   author: sender});
 }
 createMapFile('/tweet/tweetText.map', tweetText);
 
@@ -45,7 +45,7 @@ function profileText(path, content) {
 	path: path,
 	content: content,
 	type: 'profile-search-result',
-	user: user});
+	author: user});
 }
 createMapFile('/profile/profileText.map', profileText);
 
@@ -60,7 +60,7 @@ function keywords(path, content) {
 	var result = {path: content.path, 
 		      summary: summary, 
 		      type: content.type,
-		      user: content.user};
+		      author: content.author};
 	for(var key in content.content) {
 	    result[key] = content.content[key];
 	}

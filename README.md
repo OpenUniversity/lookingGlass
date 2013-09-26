@@ -570,6 +570,34 @@ util.seq([
 ], done)();
 ```
 
+should properly handle file names starting with a dot (.).
+
+```js
+util.seq([
+		function(_) { driver.transaction({path: '/a/b/', put: {'.foo': {foo: 'bar'}}}, _); },
+		function(_) { driver.transaction({path: '/a/b/', get: ['.foo']}, _.to('result')); },
+		function(_) {
+		    assert.equal(this.result['.foo'].foo, 'bar');
+		    _();
+		},
+], done)();
+```
+
+should handle the case where one file name is a suffix of the other.
+
+```js
+util.seq([
+		function(_) { driver.transaction({path: '/a/b/', put: {'X': {foo: 1}}}, _); },
+		function(_) { driver.transaction({path: '/a/b/', put: {'Y.X': {foo: 2}}}, _); },
+		function(_) { driver.transaction({path: '/a/b/', get: ['X', 'Y.X']}, _.to('result')); },
+		function(_) {
+		    assert.equal(this.result['X'].foo, 1);
+		    assert.equal(this.result['Y.X'].foo, 2);
+		    _();
+		},
+], done)();
+```
+
 <a name="mongofs-as-storagedriver-transactiontrans-callbackerr-result"></a>
 ### .transaction(trans, callback(err, result))
 should allow for multiple get and put operations to be performed atomically.
@@ -663,7 +691,7 @@ should return all files if given *.
 
 ```js
 util.seq([
-			function(_) { driver.transaction({path: '/a/b/', get: '*'}, _.to('result')); },
+			function(_) { driver.transaction({path: '/a/b/', get: ['*']}, _.to('result')); },
 			function(_) {
 			    assert(this.result.c, 'c should be listed');
 			    assert.equal(this.result.c.x, 1);
@@ -1253,7 +1281,7 @@ util.seq([
 			    var task = this.result[key].task;
 			    assert.deepEqual(task, {type: 'transaction',
 						    path: '/a/',
-						    put: {'b.d': {}},
+						    put: {'b.d': {dir: 'b'}},
 						    _ts: '0100',
 						    _tracking: task._tracking,
 						    _id: task._id});

@@ -28,20 +28,10 @@
 </table>
 <table class="template" id="follow-template">
 <tr>
-  <td>
-    <select data-bind="who"
-	    class="container" 
-	    data-path="/tweet/*.d" 
-	    data-type="user-option">
-      <option>Select One...</option>
-    </select>
-  </td>
-  <td><button class="remove">x</button></td>
+  <td data-bind="who"></td>
+  <td><button class="remove">Unfollow</button></td>
 </tr>
 </table>
-<select class="template" id="user-option-template">
-  <option data-bind="dir, value=dir">??</option>
-</select>
 
 <div class="template" id="profile-template">
   <table>
@@ -58,15 +48,25 @@
 </div>
 
 <div class="template" id="profile-search-result-template">
-  <div>
-    [User Profile] <span data-bind="user"></span> (<span data-bind="realName"></span>)
+  <div class="form">
+    <div class="container" data-path="/followers/{user}/{author}.json" data-type="following-indication">
+      <button class="create show-if-empty" data-new="who: '{author}'" data-container=".container">Follow</button>
+    </div>
+    [User Profile] <span data-bind="author"></span> (<span data-bind="realName"></span>)
   </div>
 </div>
 
 <div class="template" id="tweet-search-result-template">
-  <div>
-    [Tweet] <span data-bind="user"></span> says <span data-bind="text"></span>
+  <div class="form">
+    <div class="container" data-path="/followers/{user}/{author}.json" data-type="following-indication">
+      <button class="create show-if-empty" data-new="who: '{author}'" data-container=".container">Follow</button>
+    </div>
+    [Tweet] <span data-bind="author"></span> says <span data-bind="text"></span>
   </div>
+</div>
+
+<div class="template" id="following-indication-template">
+  <span>Following</span>
 </div>
 
 <div class="form">
@@ -74,25 +74,25 @@
 <p>User Name: <input type="text" data-bind="user"/><button class="refresh">Login</button></p>
 <table><tr>
 	<td>
-		<table id="timeline"
-			class="container" 
-			data-path="/timeline/{user}/*.json" 
-			data-type="timeline"
-			data-interval="2000">
-		  <tr class="show-if-empty">
-		    <td>Nothing to see... Try following someone!</td>
-		  </tr>
-		</table>
+	  <table id="timeline"
+		 class="container" 
+		 data-path="/timeline/{user}/*.json" 
+		 data-type="timeline"
+		 data-interval="2000">
+	    <tr class="show-if-empty">
+	      <td>Nothing to see... Try following someone!</td>
+	    </tr>
+	  </table>
 	</td>
 	<td>
-		<button class="create" data-container="#my-tweets" data-new="text: ''">What's on you mind?</button>
-		<table id="my-tweets" class="container" data-path="/tweet/{user}/*.json" data-type="tweet"></table>
+	  <button class="create" data-container="#my-tweets" data-new="text: ''">What's on you mind?</button>
+	  <table id="my-tweets" class="container" data-path="/tweet/{user}/*.json" data-type="tweet"></table>
 	</td>
 	<td>
-		<button class="create" data-container="#follow">Follow Another Dude or Gal</button>
-		<table id="follow" class="container" data-path="/followers/{user}/*.json" data-type="follow">
-		  <tr class="show-if-empty"><td>You really should follow someone</td></tr>
-		</table>
+	  <p>Currently Following:</p>
+	  <table id="follow" class="container" data-path="/followers/{user}/*.json" data-type="follow">
+	    <tr class="show-if-empty"><td>You really should follow someone</td></tr>
+	  </table>
 	</td>
 	<td id="profile" class="container" data-path="/profile/{user}.json" data-type="profile">
 	  <button class="show-if-empty create" data-container="#profile" data-new="user: '{user}'">Create Profile</button>

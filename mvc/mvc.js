@@ -18,6 +18,9 @@ $(function() {
 	var pathParts = getPathParts(self);
 	var path = pathParts.path;
 	var query = pathParts.query;
+	if(self.data('mvc')) {
+	    return;
+	}
 	self.data('mvc', {});
 
 	if(!self.attr('id')) {
@@ -41,6 +44,7 @@ $(function() {
 		data: JSON.stringify(trans),
 		success: function(data) {
 		    if(!data._noChangesSince) {
+			if(!jQuery.contains(document.documentElement, self[0])) return;
 			sync(data);
 			lastChange = data._lastChangeTS;
 		    }
@@ -74,7 +78,6 @@ $(function() {
 		    items++;
 		    if(!mvc) mvc = {};
 		    mvc[key] = wrapObject(data[key], key, self);
-		    $$.document.append(mvc[key], '#' + self.attr('id'));
 		}
 	    } catch(e) {
 		synchronizing = false;
@@ -118,14 +121,16 @@ $(function() {
 	var parentForms = self.parents('.form');
 	for(var i = 0; i < parentForms.length; i++) {
 	    var field = $(parentForms[i]).find('[data-bind=' + name + ']');
-	    if(field) return field.val();
+	    if(field.length) {
+		return field.val() || field.html();
+	    }
 	}
 	throw new Error('No such field: ' + name);
     }
 
     $('body').on('click', '.create[data-container]', function() {
 	var containerSel = $(this).attr('data-container');
-	var container = $(containerSel);
+	var container = $(this).parents('.form, html').first().find(containerSel);
 	if(container.length != 1) {
 	    throw new Error('Bad container selector: ' + containerSel);
 	}
@@ -134,7 +139,6 @@ $(function() {
 	var mvc = container.data('mvc');
 	var key = generateKey(getPathParts(container).query);
 	mvc[key] = wrapObject(obj, key, container);
-	$$.document.append(mvc[key], containerSel);
 	container.find('.show-if-empty').hide();
     });
 
@@ -142,6 +146,7 @@ $(function() {
 	var form = $(this).parents('.form')[0];
 	if(!form) return;
 	$(form).find('.container').each(function() {
+	    if(!jQuery.contains(document.documentElement, this)) return;
 	    var container = $(this);
 	    var intervalID = container.data('intervalID');
 	    clearInterval(intervalID);
@@ -151,6 +156,7 @@ $(function() {
 		for(key in mvc) {
 		    mvc[key].destroy();
 		}
+		container.data('mvc', false);
 		registerContainer(container);
 		synchronizing = false;
 	    } catch(e) {
@@ -173,7 +179,6 @@ $(function() {
 	    },
 	    'create': function() {
 		if(!synchronizing) updateFileOnServer(path, key, this);
-		registerContainers(this.view.$());
 	    },
 	    'destroy': function() {
 		if(!synchronizing) deleteFileOnServer(path, key, this);
@@ -187,7 +192,10 @@ $(function() {
 	};
 	var destroyEvent = self.attr('data-remove-event') || 'click .remove';
 	controller[destroyEvent] = function() { this.destroy(); };
-	return $$(obj, template, controller);
+	var agilityObj = $$(obj, template, controller);
+	$$.document.append(agilityObj, '#' + self.attr('id'));
+	registerContainers(agilityObj.view.$());
+	return agilityObj;
     }
     
     function hasNoFields(obj) {
