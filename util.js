@@ -163,20 +163,13 @@ exports.httpJsonReq = function(method, URL, content, callback, headers) {
     var http = require('http');
     var url = require('url');
     var parsedURL = url.parse(URL);
-    var client = http.createClient(parsedURL.port, parsedURL.hostname);
-    var headers = headers || {};
-    headers.host = parsedURL.host;
+    parsedURL.headers = headers || {};
+    parsedURL.headers.host = parsedURL.host;
     if(content) {
-	headers['content-type'] = 'application/json';
+	parsedURL.headers['content-type'] = 'application/json';
     }
-    var request = client.request(method, parsedURL.path, headers);
-    if(content) {
-        request.end(JSON.stringify(content));
-    } else {
-        request.end();
-    }
-    request.on('error', callback);
-    request.on('response', function(resp) {
+    parsedURL.method = method;
+    var request = http.request(parsedURL, function(resp) {
         var data = '';
         resp.setEncoding('utf8');
         resp.on('data', function(chunk) {
@@ -191,7 +184,14 @@ exports.httpJsonReq = function(method, URL, content, callback, headers) {
 		callback(undefined, resp.statusCode, resp.headers, data);
 	    }
         }));
+	resp.on('error', callback);
     });
+    if(content) {
+        request.end(JSON.stringify(content));
+    } else {
+        request.end();
+    }
+    request.on('error', callback);
 };
 
 exports.parsePath = function(path) {

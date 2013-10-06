@@ -33,7 +33,8 @@ function tweetText(path, content) {
 							   path: path, 
 							   content: content,
 							   type: 'tweet-search-result',
-							   author: sender});
+							   author: sender,
+							   id: content._ts});
 }
 createMapFile('/tweet/tweetText.map', tweetText);
 
@@ -45,7 +46,8 @@ function profileText(path, content) {
 	path: path,
 	content: content,
 	type: 'profile-search-result',
-	author: user});
+	author: user,
+	id: content._ts});
 }
 createMapFile('/profile/profileText.map', profileText);
 
@@ -64,7 +66,7 @@ function keywords(path, content) {
 	for(var key in content.content) {
 	    result[key] = content.content[key];
 	}
-	emit('/keywords/' + keyword + '/' + content._ts + '.json', result);
+	emit('/keywords/' + keyword + '/' + content.id + '.json', result);
     }
 }
 createMapFile('/text/keywords.map', keywords);

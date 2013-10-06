@@ -107,14 +107,29 @@ $(function() {
 	var match = regex.exec(str);
 	var rep = [];
 	while(match) {
-	    var argName = match[1];
-	    rep.push([match[0], paramValue(argName, self)]);
+	    var expr = match[1];
+	    rep.push([match[0], exprValue(expr, self)]);
 	    match = regex.exec(str);
 	}
 	for(var i = 0; i < rep.length; i++) {
 	    str = str.replace(rep[i][0], rep[i][1]);
 	}
 	return str;
+    }
+
+    function exprValue(expr, self) {
+	var regex = /\$([a-zA-Z0-9_\-]+)/g;
+	var match = regex.exec(expr);
+	var rep = [];
+	while(match) {
+	    var argName = match[1];
+	    rep.push([match[0], JSON.stringify(paramValue(argName, self))]);
+	    match = regex.exec(expr);
+	}
+	for(var i = 0; i < rep.length; i++) {
+	    expr = expr.replace(rep[i][0], rep[i][1]);
+	}
+	return eval('(' + expr + ')');
     }
 
     function paramValue(name, self) {

@@ -49,8 +49,8 @@
 
 <div class="template" id="profile-search-result-template">
   <div class="form">
-    <div class="container" data-path="/followers/{user}/{author}.json" data-type="following-indication">
-      <button class="create show-if-empty" data-new="who: '{author}'" data-container=".container">Follow</button>
+    <div class="container" data-path="/followers/{$user}/{$author}.json" data-type="following-indication">
+      <button class="create show-if-empty" data-new="who: '{$author}'" data-container=".container">Follow</button>
     </div>
     [User Profile] <span data-bind="author"></span> (<span data-bind="realName"></span>)
   </div>
@@ -58,8 +58,8 @@
 
 <div class="template" id="tweet-search-result-template">
   <div class="form">
-    <div class="container" data-path="/followers/{user}/{author}.json" data-type="following-indication">
-      <button class="create show-if-empty" data-new="who: '{author}'" data-container=".container">Follow</button>
+    <div class="container" data-path="/followers/{$user}/{$author}.json" data-type="following-indication">
+      <button class="create show-if-empty" data-new="who: '{$author}'" data-container=".container">Follow</button>
     </div>
     [Tweet] <span data-bind="author"></span> says <span data-bind="text"></span>
   </div>
@@ -76,7 +76,7 @@
 	<td>
 	  <table id="timeline"
 		 class="container" 
-		 data-path="/timeline/{user}/*.json" 
+		 data-path="/timeline/{$user}/*.json" 
 		 data-type="timeline"
 		 data-interval="2000">
 	    <tr class="show-if-empty">
@@ -85,21 +85,23 @@
 	  </table>
 	</td>
 	<td>
-	  <button class="create" data-container="#my-tweets" data-new="text: ''">What's on you mind?</button>
-	  <table id="my-tweets" class="container" data-path="/tweet/{user}/*.json" data-type="tweet"></table>
+	  <button class="create" data-container="#my-tweets">What's on you mind?</button>
+	  <table id="my-tweets" class="container" data-path="/tweet/{$user}/*.json" data-type="tweet"></table>
 	</td>
 	<td>
 	  <p>Currently Following:</p>
-	  <table id="follow" class="container" data-path="/followers/{user}/*.json" data-type="follow">
+	  <table id="follow" class="container" data-path="/followers/{$user}/*.json" data-type="follow">
 	    <tr class="show-if-empty"><td>You really should follow someone</td></tr>
 	  </table>
 	</td>
-	<td id="profile" class="container" data-path="/profile/{user}.json" data-type="profile">
-	  <button class="show-if-empty create" data-container="#profile" data-new="user: '{user}'">Create Profile</button>
+	<td id="profile" class="container" data-path="/profile/{$user}.json" data-type="profile">
+	  <button class="show-if-empty create" data-container="#profile" data-new="user: '{$user}'">Create Profile</button>
 	</td>
 	<td class="form">
 	  <p>Search: <input type="text" data-bind="search"/><button class="refresh">Go!</button></p>
-	  <div class="container" data-path="/keywords/{search}/*.json" data-type="search-result"/>
+	  <div class="container" data-path="/keywords/{($search).toLowerCase().split(' ')[0]}/*.json" data-type="search-result">
+	    <div class="show-if-empty">Sorry, found nothing</div>
+	  </div>
 	</td>
 </tr></table>
 </div>

@@ -71,14 +71,17 @@ describe('lookingGlass RESTful API', function() {
 	    storeFileWithContentType('text/foobar', 'foo bar foo bar foo bar', done);
 	    
 	    function storeFileWithContentType(contentType, content, done) {
-		var client = http.createClient(47837, 'localhost');
-		var request = client.request('PUT', '/a/b/foo.txt', {host: 'localhost', 'content-type': contentType});
-		request.end(content);
-		request.on('error', done);
-		request.on('response', function(resp) {
+		var url = require('url').parse('http://localhost:47837/a/b/foo.txt');
+		url.method = 'PUT';
+		url.headers = {'content-type': contentType};
+		var request = http.request(url, function(resp) {
 		    assert.equal(resp.statusCode, 201);
+		    resp.on('error', done);
+		    resp.on('data', function() {});
 		    resp.on('end', done);
 		});
+		request.on('error', done);
+		request.end(content);
 	    }
 	});
 	it('should ignore attributes of the content-type header when considering whether to store an object as JSON', function(done) {
@@ -91,14 +94,17 @@ describe('lookingGlass RESTful API', function() {
 	});
     });
     function storeFileWithContentType(contentType, content, done) {
-	var client = http.createClient(47837, 'localhost');
-	var request = client.request('PUT', '/a/b/foo.txt', {host: 'localhost', 'content-type': contentType});
-	request.end(content);
-	request.on('error', done);
-	request.on('response', function(resp) {
+	var url = require('url').parse('http://localhost:47837/a/b/foo.txt');
+	url.method = 'PUT';
+	url.headers = {'content-type': contentType};
+	var request = http.request(url, function(resp) {
 	    assert.equal(resp.statusCode, 201);
+	    resp.on('data', function() {});
+	    resp.on('error', done);
 	    resp.on('end', done);
 	});
+	request.on('error', done);
+	request.end(content);
     }
     describe('GET', function() {
 	it('should return a status of 404 when accessing a file that does not exist', function(done) {
